@@ -12,36 +12,37 @@ const (
 	pathAPIMusicStorageNeighbors = "/api/music/storage/neighbors"
 )
 
-type mpdNeighbors interface {
-	ListNeighbors(context.Context) ([]map[string]string, error)
-}
-
-type neighbors struct {
-	client    mpdNeighbors
-	jsonCache *jsonCache
-	handler   http.Handler
-}
-
-func newNeighbors(client mpdNeighbors, cache *jsonCache) *neighbors {
-	return &neighbors{
-		client:    client,
-		jsonCache: cache,
-		handler:   cache.Handler(pathAPIMusicStorageNeighbors),
+// Neighbors provides neighbor storage name and uri.
+type Neighbors struct {
+	mpd interface {
+		ListNeighbors(context.Context) ([]map[string]string, error)
 	}
+	cache *cache
 }
 
-func (a *neighbors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.handler.ServeHTTP(w, r)
+// NewNeighbors initilize Neighbors cache with mpd connection.
+func NewNeighbors(mpd interface {
+	ListNeighbors(context.Context) ([]map[string]string, error)
+}) (*Neighbors, error) {
+	c, err := newCache(map[string]*httpStorage{})
+	if err != nil {
+		return nil, err
+	}
+	return &Neighbors{
+		mpd:   mpd,
+		cache: c,
+	}, nil
 }
 
-func (a *neighbors) Update(ctx context.Context) error {
+// Update updates neighbors list.
+func (a *Neighbors) Update(ctx context.Context) error {
 	ret := map[string]*httpStorage{}
-	ms, err := a.client.ListNeighbors(ctx)
+	ms, err := a.mpd.ListNeighbors(ctx)
 	if err != nil {
 		// skip command error to support old mpd
 		var perr *mpd.CommandError
 		if errors.As(err, &perr) {
-			a.jsonCache.SetIfModified(pathAPIMusicStorageNeighbors, ret)
+			a.cache.SetIfModified(ret)
 			return nil
 		}
 		return err
@@ -51,6 +52,21 @@ func (a *neighbors) Update(ctx context.Context) error {
 			URI: stringPtr(m["neighbor"]),
 		}
 	}
-	a.jsonCache.SetIfModified(pathAPIMusicStorageNeighbors, ret)
+	a.cache.SetIfModified(ret)
 	return nil
+}
+
+// ServeHTTP responses neighbors list as json format.
+func (a *Neighbors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.cache.ServeHTTP(w, r)
+}
+
+// Changed returns neighbors list update event chan.
+func (a *Neighbors) Changed() <-chan struct{} {
+	return a.cache.Changed()
+}
+
+// Close closes update event chan.
+func (a *Neighbors) Close() {
+	a.cache.Close()
 }

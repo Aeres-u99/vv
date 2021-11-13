@@ -38,6 +38,18 @@ func (a *api) StatusHandler() http.HandlerFunc {
 	var mu sync.Mutex
 
 	go func() {
+		for range a.neighbors.Changed() {
+			mu.Lock()
+			for _, c := range subs {
+				select {
+				case c <- pathAPIMusicStorageNeighbors:
+				default:
+				}
+			}
+			mu.Unlock()
+		}
+	}()
+	go func() {
 		for e := range a.jsonCache.Event() {
 			mu.Lock()
 			for _, c := range subs {

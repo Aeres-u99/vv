@@ -22,7 +22,7 @@ type api struct {
 	upgrader  websocket.Upgrader
 	imgBatch  *imgBatch
 
-	neighbors *neighbors
+	neighbors *Neighbors
 
 	playlist     []map[string][]string
 	library      []map[string][]string
@@ -41,13 +41,17 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		c.BackgroundTimeout = 30 * time.Second
 	}
 	cache := newJSONCache()
+	neighbors, err := NewNeighbors(cl)
+	if err != nil {
+		return nil, err
+	}
 	a := &api{
 		config:    c,
 		client:    cl,
 		watcher:   w,
 		imgBatch:  newImgBatch(c.ImageProviders),
 		jsonCache: cache,
-		neighbors: newNeighbors(cl, cache),
+		neighbors: neighbors,
 
 		playlistInfo: &httpPlaylistInfo{},
 		stopCh:       make(chan struct{}),
@@ -132,6 +136,7 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 	go func() {
 		wg.Wait()
 		a.jsonCache.Close()
+		a.neighbors.Close()
 	}()
 	return nil
 }
