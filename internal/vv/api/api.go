@@ -22,7 +22,11 @@ type api struct {
 	upgrader  websocket.Upgrader
 	imgBatch  *imgBatch
 
+	outputs   *Outputs
+	storage   *Storage
 	neighbors *Neighbors
+	version   *Version
+	stats     *Stats
 
 	playlist     []map[string][]string
 	library      []map[string][]string
@@ -41,7 +45,23 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		c.BackgroundTimeout = 30 * time.Second
 	}
 	cache := newJSONCache()
+	storage, err := NewStorage(cl)
+	if err != nil {
+		return nil, err
+	}
 	neighbors, err := NewNeighbors(cl)
+	if err != nil {
+		return nil, err
+	}
+	version, err := NewVersion(cl, c.AppVersion)
+	if err != nil {
+		return nil, err
+	}
+	outputs, err := NewOutputs(cl, c.AudioProxy)
+	if err != nil {
+		return nil, err
+	}
+	stats, err := NewStats(cl)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +71,11 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		watcher:   w,
 		imgBatch:  newImgBatch(c.ImageProviders),
 		jsonCache: cache,
+		storage:   storage,
 		neighbors: neighbors,
+		version:   version,
+		outputs:   outputs,
+		stats:     stats,
 
 		playlistInfo: &httpPlaylistInfo{},
 		stopCh:       make(chan struct{}),
@@ -64,10 +88,10 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 
 // runCacheUpdater initializes mpd caches and launches mpd/cover image cache updater.
 func (a *api) runCacheUpdater(ctx context.Context) error {
-	if err := a.updateVersion(); err != nil {
+	if err := a.version.Update(); err != nil {
 		return err
 	}
-	all := []func(context.Context) error{a.updateLibrarySongs, a.updatePlaylistSongs, a.updateOptions, a.updateStatus, a.updatePlaylistSongsCurrent, a.updateOutputs, a.updateStats, a.updateStorage, a.neighbors.Update}
+	all := []func(context.Context) error{a.updateLibrarySongs, a.updatePlaylistSongs, a.updateOptions, a.updateStatus, a.updatePlaylistSongsCurrent, a.outputs.Update, a.stats.Update, a.storage.Update, a.neighbors.Update}
 	if !a.config.skipInit {
 		for _, v := range all {
 			if err := v(ctx); err != nil {
@@ -98,9 +122,9 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(context.Background(), a.config.BackgroundTimeout)
 			switch e {
 			case "reconnecting":
-				a.updateVersionNoMPD()
+				a.version.UpdateNoMPD()
 			case "reconnect":
-				a.updateVersion()
+				a.version.Update()
 				for _, v := range all {
 					v(ctx)
 				}
@@ -109,13 +133,13 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 				a.updateStatus(ctx)
 				// h.updateCurrentSong(ctx) // "currentsong" metadata did not updated until song changes
 				// h.updatePlaylistSongs(ctx) // client does not use this api
-				a.updateStats(ctx)
+				a.stats.Update(ctx)
 			case "playlist":
 				a.updatePlaylistSongs(ctx)
 			case "player":
 				a.updateStatus(ctx)
 				a.updatePlaylistSongsCurrent(ctx)
-				a.updateStats(ctx)
+				a.stats.Update(ctx)
 			case "mixer":
 				a.updateStatus(ctx)
 			case "options":
@@ -124,9 +148,9 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 			case "update":
 				a.updateStatus(ctx)
 			case "output":
-				a.updateOutputs(ctx)
+				a.outputs.Update(ctx)
 			case "mount":
-				a.updateStorage(ctx)
+				a.storage.Update(ctx)
 			case "neighbor":
 				a.neighbors.Update(ctx)
 			}
@@ -137,6 +161,11 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 		wg.Wait()
 		a.jsonCache.Close()
 		a.neighbors.Close()
+		a.storage.Close()
+		a.version.Close()
+		a.outputs.Close()
+		a.stats.Close()
+
 	}()
 	return nil
 }

@@ -36,19 +36,23 @@ func (a *api) StatusHandler() http.HandlerFunc {
 	rest := a.statusHandlerHTTP()
 	subs := make([]chan string, 0, 10)
 	var mu sync.Mutex
-
-	go func() {
-		for range a.neighbors.Changed() {
+	eventDispatch := func(path string, event <-chan struct{}) {
+		for range event {
 			mu.Lock()
 			for _, c := range subs {
 				select {
-				case c <- pathAPIMusicStorageNeighbors:
+				case c <- path:
 				default:
 				}
 			}
 			mu.Unlock()
 		}
-	}()
+	}
+	go eventDispatch(pathAPIMusicStorage, a.storage.Changed())
+	go eventDispatch(pathAPIMusicStorageNeighbors, a.neighbors.Changed())
+	go eventDispatch(pathAPIVersion, a.version.Changed())
+	go eventDispatch(pathAPIMusicOutputs, a.outputs.Changed())
+	go eventDispatch(pathAPIMusicStats, a.stats.Changed())
 	go func() {
 		for e := range a.jsonCache.Event() {
 			mu.Lock()

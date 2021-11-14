@@ -126,15 +126,15 @@ func TestHandler(t *testing.T) {
 				},
 				{
 					method: http.MethodGet, path: "/api/music/outputs",
-					want: map[int]string{http.StatusOK: ""},
+					want: map[int]string{http.StatusOK: "{}"},
 				},
 				{
 					method: http.MethodGet, path: "/api/music/stats",
-					want: map[int]string{http.StatusOK: ""},
+					want: map[int]string{http.StatusOK: `{"uptime":0,"playtime":0,"artists":0,"albums":0,"songs":0,"library_playtime":0,"library_update":0}`},
 				},
 				{
 					method: http.MethodGet, path: "/api/music/storage",
-					want: map[int]string{http.StatusOK: ""},
+					want: map[int]string{http.StatusOK: "{}"},
 				},
 				{
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {
@@ -516,8 +516,7 @@ func TestHandler(t *testing.T) {
 						sub.Expect(ctx, &mpdtest.WR{Read: "idle\n", Write: "changed: mount\nOK\n"})
 						main.Expect(ctx, &mpdtest.WR{Read: "listmounts\n", Write: "ACK [5@0] {} unknown command \"listmounts\"\nOK\n"})
 					},
-					preWebSocket: []string{"/api/music/storage"},
-					method:       http.MethodGet, path: "/api/music/storage",
+					method: http.MethodGet, path: "/api/music/storage",
 					want: map[int]string{http.StatusOK: `{}`},
 				},
 			},
@@ -548,7 +547,7 @@ func TestHandler(t *testing.T) {
 					},
 					method: http.MethodPost, path: "/api/music/storage", body: strings.NewReader(`{"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
 					},
 					postWebSocket: []string{"/api/music/storage"},
@@ -567,7 +566,7 @@ func TestHandler(t *testing.T) {
 					},
 					method: http.MethodPost, path: "/api/music/storage", body: strings.NewReader(`{"foo":{"uri":null}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"":{"uri":"/home/foo/music"}}`,
 					},
 					postWebSocket: []string{"/api/music/storage"},
@@ -582,7 +581,7 @@ func TestHandler(t *testing.T) {
 						main.Expect(ctx, &mpdtest.WR{Read: "update \"foo\"\n", Write: "OK\n"})
 					},
 					method: http.MethodPost, path: "/api/music/storage", body: strings.NewReader(`{"foo":{"updating":true}}`),
-					want: map[int]string{http.StatusAccepted: ""},
+					want: map[int]string{http.StatusAccepted: "{}"},
 				},
 			},
 		},
@@ -642,7 +641,7 @@ func TestHandler(t *testing.T) {
 				{
 					method: http.MethodPost, path: "/api/music/outputs", body: strings.NewReader(`{"0":{"enabled":true}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"0":{"name":"My ALSA Device","enabled":true}}`,
 					},
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {
@@ -663,7 +662,7 @@ func TestHandler(t *testing.T) {
 				{
 					method: http.MethodPost, path: "/api/music/outputs", body: strings.NewReader(`{"0":{"enabled":false}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"0":{"name":"My ALSA Device","enabled":false}}`,
 					},
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {
@@ -684,7 +683,7 @@ func TestHandler(t *testing.T) {
 				{
 					method: http.MethodPost, path: "/api/music/outputs", body: strings.NewReader(`{"0":{"attributes":{"dop":true}}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":false,"attributes":{"dop":true}}}`,
 					},
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {
@@ -705,7 +704,7 @@ func TestHandler(t *testing.T) {
 				{
 					method: http.MethodPost, path: "/api/music/outputs", body: strings.NewReader(`{"0":{"attributes":{"allowed_formats":[]}}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":false,"attributes":{"allowed_formats":[]}}}`,
 					},
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {
@@ -726,7 +725,7 @@ func TestHandler(t *testing.T) {
 				{
 					method: http.MethodPost, path: "/api/music/outputs", body: strings.NewReader(`{"0":{"attributes":{"allowed_formats":["96000:16:*","192000:24:*","dsd32:*=dop"]}}}`),
 					want: map[int]string{
-						http.StatusAccepted: "",
+						http.StatusAccepted: "{}",
 						http.StatusOK:       `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":false,"attributes":{"allowed_formats":["96000:16:*","192000:24:*","dsd32:*=dop"]}}}`,
 					},
 					initFunc: func(ctx context.Context, main *mpdtest.Server, sub *mpdtest.Server) {

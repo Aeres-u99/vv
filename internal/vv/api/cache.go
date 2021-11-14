@@ -47,10 +47,11 @@ func (c *cache) Changed() <-chan struct{} {
 }
 
 func (c *cache) Set(i interface{}) error {
-	return c.set(i, true)
+	_, err := c.set(i, true)
+	return err
 }
 
-func (c *cache) SetIfModified(i interface{}) error {
+func (c *cache) SetIfModified(i interface{}) (bool, error) {
 	return c.set(i, false)
 }
 
@@ -88,10 +89,10 @@ func (c *cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func (c *cache) set(i interface{}, force bool) error {
+func (c *cache) set(i interface{}, force bool) (bool, error) {
 	n, gz, err := cacheBinary(i)
 	if err != nil {
-		return err
+		return false, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -105,8 +106,9 @@ func (c *cache) set(i interface{}, force bool) error {
 		case c.changed <- struct{}{}:
 		default:
 		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func cacheBinary(i interface{}) ([]byte, []byte, error) {

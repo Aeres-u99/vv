@@ -9,13 +9,8 @@ import (
 )
 
 const (
-	pathAPIMusicLibrary      = "/api/music/library"
 	pathAPIMusicLibrarySongs = "/api/music/library/songs"
 )
-
-type httpLibraryInfo struct {
-	Updating bool `json:"updating"`
-}
 
 func (a *api) LibraryHandler() http.HandlerFunc {
 	get := a.jsonCache.Handler(pathAPIMusicLibrary)

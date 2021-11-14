@@ -43,18 +43,18 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	}
 	h := &Handler{
 		api:                          a,
-		apiVersion:                   a.VersionHandler(),
+		apiVersion:                   a.version,
 		apiMusic:                     a.StatusHandler(),
-		apiMusicStats:                a.StatsHandler(),
+		apiMusicStats:                a.stats,
 		apiMusicPlaylist:             a.PlaylistHandler(),
 		apiMusicPlaylistSongs:        a.PlaylistSongsHandler(),
 		apiMusicPlaylistSongsCurrent: a.PlaylistSongsCurrentHandler(),
 		apiMusicLibrary:              a.LibraryHandler(),
 		apiMusicLibrarySongs:         a.LibrarySongsHandler(),
-		apiMusicOutputs:              a.OutputsHandler(),
+		apiMusicOutputs:              a.outputs,
 		apiMusicOutputsStream:        a.OutputsStreamHandler(),
 		apiMusicImages:               a.ImagesHandler(),
-		apiMusicStorage:              a.StorageHandler(),
+		apiMusicStorage:              a.storage,
 		apiMusicStorageNeighbors:     a.neighbors,
 	}
 	a.ClearEvent()

@@ -18,13 +18,6 @@ const (
 	pathAPIMusicPlaylistSongsCurrent = "/api/music/playlist/songs/current"
 )
 
-type httpPlaylistInfo struct {
-	Current *int         `json:"current,omitempty"`
-	Sort    []string     `json:"sort,omitempty"`
-	Filters [][2]*string `json:"filters,omitempty"`
-	Must    int          `json:"must,omitempty"`
-}
-
 func (a *api) PlaylistHandler() http.HandlerFunc {
 	sem := make(chan struct{}, 1)
 	sem <- struct{}{}
