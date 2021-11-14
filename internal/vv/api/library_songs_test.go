@@ -20,7 +20,7 @@ func TestLibrarySongsGet(t *testing.T) {
 		listAllInfo func(*testing.T, string) ([]map[string][]string, error)
 		err         error
 		want        string
-		eventHook   []map[string][]string
+		cache       []map[string][]string
 		changed     bool
 	}{
 		`empty`: {{
@@ -31,9 +31,9 @@ func TestLibrarySongsGet(t *testing.T) {
 				}
 				return []map[string][]string{}, nil
 			},
-			want:      `[]`,
-			eventHook: []map[string][]string{},
-			changed:   true,
+			want:    `[]`,
+			cache:   []map[string][]string{},
+			changed: true,
 		}},
 		`exists`: {{
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
@@ -43,9 +43,9 @@ func TestLibrarySongsGet(t *testing.T) {
 				}
 				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
 			},
-			want:      fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
-			eventHook: []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
-			changed:   true,
+			want:    fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
+			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
+			changed: true,
 		}},
 		`error after exists`: {{
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
@@ -55,9 +55,9 @@ func TestLibrarySongsGet(t *testing.T) {
 				}
 				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
 			},
-			want:      fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
-			eventHook: []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
-			changed:   true,
+			want:    fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
+			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
+			changed: true,
 		}, {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
@@ -66,28 +66,19 @@ func TestLibrarySongsGet(t *testing.T) {
 				}
 				return nil, context.DeadlineExceeded
 			},
-			err:  context.DeadlineExceeded,
-			want: fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
+			err:   context.DeadlineExceeded,
+			want:  fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
+			cache: []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdLibrarySongsAPI{t: t}
-
-			var eventHook func([]map[string][]string)
-			h, err := api.NewLibrarySongs(mpd, songsHook, func(s []map[string][]string) { eventHook(s) })
+			h, err := api.NewLibrarySongs(mpd, songsHook)
 			if err != nil {
 				t.Fatalf("api.NewLibrarySongs() = %v, %v", h, err)
 			}
 			for i := range tt {
 				t.Run(fmt.Sprint(i), func(t *testing.T) {
-					called := false
-					eventHook = func(got []map[string][]string) {
-						t.Helper()
-						called = true
-						if !reflect.DeepEqual(got, tt[i].eventHook) {
-							t.Errorf("call eventHook(%q); want eventHook(%q)", got, tt[i].eventHook)
-						}
-					}
 					mpd.listAllInfo = tt[i].listAllInfo
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
 						t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
@@ -102,6 +93,9 @@ func TestLibrarySongsGet(t *testing.T) {
 					if got, want := w.Result().StatusCode, http.StatusOK; got != want {
 						t.Errorf("ServeHTTP response status: got %d; want %d", got, want)
 					}
+					if cache := h.Cache(); !reflect.DeepEqual(cache, tt[i].cache) {
+						t.Errorf("got cache\n%v; want\n%v", cache, tt[i].cache)
+					}
 					changed := false
 					select {
 					case <-h.Changed():
@@ -110,9 +104,6 @@ func TestLibrarySongsGet(t *testing.T) {
 					}
 					if changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
-					}
-					if called != tt[i].changed {
-						t.Errorf("eventHook called = %v; want %v", called, tt[i].changed)
 					}
 				})
 			}

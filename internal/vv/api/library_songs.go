@@ -10,16 +10,16 @@ type MPDLibrarySongsAPI interface {
 	ListAllInfo(context.Context, string) ([]map[string][]string, error)
 }
 
-func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]string) []map[string][]string, eventHooks ...func([]map[string][]string)) (*LibrarySongs, error) {
+func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]string) []map[string][]string) (*LibrarySongs, error) {
 	cache, err := newCache([]map[string][]string{})
 	if err != nil {
 		return nil, err
 	}
 	return &LibrarySongs{
-		mpd:        mpd,
-		cache:      cache,
-		songsHook:  songsHook,
-		eventHooks: eventHooks,
+		mpd:       mpd,
+		cache:     cache,
+		changed:   make(chan struct{}, cap(cache.Changed())),
+		songsHook: songsHook,
 	}, nil
 
 }
@@ -27,10 +27,11 @@ func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]strin
 type LibrarySongs struct {
 	mpd        MPDLibrarySongsAPI
 	cache      *cache
+	changed    chan struct{}
 	songsHook  func([]map[string][]string) []map[string][]string
 	eventHooks []func([]map[string][]string)
 	data       []map[string][]string
-	mu         sync.Mutex
+	mu         sync.RWMutex
 }
 
 func (a *LibrarySongs) Update(ctx context.Context) error {
@@ -46,10 +47,17 @@ func (a *LibrarySongs) Update(ctx context.Context) error {
 	a.mu.Lock()
 	a.data = v
 	a.mu.Unlock()
-	for i := range a.eventHooks {
-		a.eventHooks[i](v)
+	select {
+	case a.changed <- struct{}{}:
+	default:
 	}
 	return nil
+}
+
+func (a *LibrarySongs) Cache() []map[string][]string {
+	a.mu.RLock()
+	a.mu.RUnlock()
+	return a.data
 }
 
 // ServeHTTP responses library song list as json format.
@@ -59,7 +67,7 @@ func (a *LibrarySongs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Changed returns library song list update event chan.
 func (a *LibrarySongs) Changed() <-chan struct{} {
-	return a.cache.Changed()
+	return a.changed
 }
 
 // Close closes update event chan.

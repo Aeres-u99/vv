@@ -10,16 +10,16 @@ type MPDPlaylistSongsAPI interface {
 	PlaylistInfo(context.Context) ([]map[string][]string, error)
 }
 
-func NewPlaylistSongs(mpd MPDPlaylistSongsAPI, songsHook func([]map[string][]string) []map[string][]string, eventHooks ...func([]map[string][]string)) (*PlaylistSongs, error) {
+func NewPlaylistSongs(mpd MPDPlaylistSongsAPI, songsHook func([]map[string][]string) []map[string][]string) (*PlaylistSongs, error) {
 	cache, err := newCache([]map[string][]string{})
 	if err != nil {
 		return nil, err
 	}
 	return &PlaylistSongs{
-		mpd:        mpd,
-		cache:      cache,
-		songsHook:  songsHook,
-		eventHooks: eventHooks,
+		mpd:       mpd,
+		cache:     cache,
+		changed:   make(chan struct{}, cap(cache.Changed())),
+		songsHook: songsHook,
 	}, nil
 
 }
@@ -27,10 +27,11 @@ func NewPlaylistSongs(mpd MPDPlaylistSongsAPI, songsHook func([]map[string][]str
 type PlaylistSongs struct {
 	mpd        MPDPlaylistSongsAPI
 	cache      *cache
+	changed    chan struct{}
 	songsHook  func([]map[string][]string) []map[string][]string
 	eventHooks []func([]map[string][]string)
 	data       []map[string][]string
-	mu         sync.Mutex
+	mu         sync.RWMutex
 }
 
 func (a *PlaylistSongs) Update(ctx context.Context) error {
@@ -47,11 +48,18 @@ func (a *PlaylistSongs) Update(ctx context.Context) error {
 	a.data = v
 	a.mu.Unlock()
 	if changed {
-		for i := range a.eventHooks {
-			a.eventHooks[i](v)
+		select {
+		case a.changed <- struct{}{}:
+		default:
 		}
 	}
 	return nil
+}
+
+func (a *PlaylistSongs) Cache() []map[string][]string {
+	a.mu.RLock()
+	a.mu.RUnlock()
+	return a.data
 }
 
 // ServeHTTP responses neighbors list as json format.
@@ -61,7 +69,7 @@ func (a *PlaylistSongs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Changed returns neighbors list update event chan.
 func (a *PlaylistSongs) Changed() <-chan struct{} {
-	return a.cache.Changed()
+	return a.changed
 }
 
 // Close closes update event chan.
