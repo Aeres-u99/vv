@@ -7,14 +7,6 @@ import (
 	"time"
 )
 
-const (
-	pathAPIMusicImages = "/api/music/images"
-)
-
-type httpImages struct {
-	Updating bool `json:"updating"`
-}
-
 func (a *api) ImagesHandler() http.HandlerFunc {
 	get := a.jsonCache.Handler(pathAPIMusicImages)
 	a.jsonCache.SetIfNone(pathAPIMusicImages, &httpImages{})
