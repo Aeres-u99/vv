@@ -22,11 +22,12 @@ type api struct {
 	upgrader  websocket.Upgrader
 	imgBatch  *imgBatch
 
-	outputs   *Outputs
-	storage   *Storage
-	neighbors *Neighbors
-	version   *Version
-	stats     *Stats
+	outputs       *Outputs
+	outputsStream *OutputsStreamHandler
+	storage       *Storage
+	neighbors     *Neighbors
+	version       *Version
+	stats         *Stats
 
 	playlist     []map[string][]string
 	library      []map[string][]string
@@ -61,21 +62,26 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 	if err != nil {
 		return nil, err
 	}
+	outputsStream, err := NewOutputsStreamHandler(c.AudioProxy)
+	if err != nil {
+		return nil, err
+	}
 	stats, err := NewStats(cl)
 	if err != nil {
 		return nil, err
 	}
 	a := &api{
-		config:    c,
-		client:    cl,
-		watcher:   w,
-		imgBatch:  newImgBatch(c.ImageProviders),
-		jsonCache: cache,
-		storage:   storage,
-		neighbors: neighbors,
-		version:   version,
-		outputs:   outputs,
-		stats:     stats,
+		config:        c,
+		client:        cl,
+		watcher:       w,
+		imgBatch:      newImgBatch(c.ImageProviders),
+		jsonCache:     cache,
+		storage:       storage,
+		neighbors:     neighbors,
+		version:       version,
+		outputs:       outputs,
+		outputsStream: outputsStream,
+		stats:         stats,
 
 		playlistInfo: &httpPlaylistInfo{},
 		stopCh:       make(chan struct{}),

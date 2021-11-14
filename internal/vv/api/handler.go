@@ -52,7 +52,7 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 		apiMusicLibrary:              a.LibraryHandler(),
 		apiMusicLibrarySongs:         a.LibrarySongsHandler(),
 		apiMusicOutputs:              a.outputs,
-		apiMusicOutputsStream:        a.OutputsStreamHandler(),
+		apiMusicOutputsStream:        a.outputsStream,
 		apiMusicImages:               a.ImagesHandler(),
 		apiMusicStorage:              a.storage,
 		apiMusicStorageNeighbors:     a.neighbors,
@@ -99,6 +99,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Stop stops internal goroutine and html audio connection.
 func (h *Handler) Stop() {
 	h.api.Stop()
+	h.api.outputsStream.Stop()
 }
 
 // Shutdown stops background api.

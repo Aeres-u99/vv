@@ -58,7 +58,7 @@ func (a *Library) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, setUpdateTime(r, now))
 }
 
-func (a *Library) Update(ctx context.Context, updating bool) error {
+func (a *Library) UpdateStatus(ctx context.Context, updating bool) error {
 	_, err := a.cache.SetIfModified(&httpLibraryInfo{Updating: updating})
 	return err
 }

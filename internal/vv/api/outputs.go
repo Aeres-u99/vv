@@ -3,8 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -152,47 +150,6 @@ func (a *Outputs) Changed() <-chan struct{} {
 // Close closes update event chan.
 func (a *Outputs) Close() {
 	a.cache.Close()
-}
-
-func (a *api) OutputsStreamHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		dev := r.URL.Query().Get("name")
-		url, ok := a.config.AudioProxy[dev]
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-		ctx, cancel := context.WithCancel(r.Context())
-		defer cancel()
-		pr, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			log.Println(url, err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		resp, err := http.DefaultClient.Do(pr)
-		if err != nil {
-			log.Println(url, err)
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-		for k, v := range resp.Header {
-			for i := range v {
-				w.Header().Add(k, v[i])
-			}
-		}
-		go func() {
-			select {
-			case <-ctx.Done():
-			case <-a.stopCh:
-				// disconnect audio stream by stop()
-				log.Println("disconnecting audio stream")
-				cancel()
-			}
-		}()
-		io.Copy(w, resp.Body)
-	}
 }
 
 func btoa(b bool, t, f string) string {
