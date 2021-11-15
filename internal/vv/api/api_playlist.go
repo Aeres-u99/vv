@@ -138,12 +138,3 @@ func (a *api) updatePlaylistSongs(ctx context.Context) error {
 
 	return err
 }
-
-func (a *api) updatePlaylistSongsCurrent(ctx context.Context) error {
-	l, err := a.client.CurrentSong(ctx)
-	if err != nil {
-		return err
-	}
-	l, _ = a.convSong(l)
-	return a.jsonCache.SetIfModified(pathAPIMusicPlaylistSongsCurrent, l)
-}

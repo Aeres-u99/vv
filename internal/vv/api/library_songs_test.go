@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/meiraka/vv/internal/vv/api"
 )
@@ -112,15 +110,11 @@ func TestLibrarySongsGet(t *testing.T) {
 
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func testSongsHook() (func(s []map[string][]string) []map[string][]string, string) {
-	key := fmt.Sprint(rand.Int())
+	f, key := testSongHook()
 	return func(s []map[string][]string) []map[string][]string {
 		for i := range s {
-			s[i][key] = []string{key}
+			s[i] = f(s[i])
 		}
 		return s
 	}, key

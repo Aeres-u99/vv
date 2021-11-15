@@ -1,0 +1,489 @@
+package api_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/meiraka/vv/internal/vv/api"
+)
+
+func TestStatusHandlerGet(t *testing.T) {
+	for label, tt := range map[string][]struct {
+		status           func() (map[string]string, error)
+		replayGainStatus func() (map[string]string, error)
+		err              error
+		want             string
+		cache            *api.Status
+		changed          bool
+		update           string
+	}{
+		"Update/empty": {{
+			status: func() (map[string]string, error) { return map[string]string{}, nil },
+			want:   `{"repeat":false,"random":false,"single":false,"oneshot":false,"consume":false,"state":"","song_elapsed":0,"replay_gain":"off","crossfade":0}`,
+			cache: &api.Status{
+				Repeat:      boolptr(false),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr(""),
+				SongElapsed: float64ptr(0),
+				ReplayGain:  strptr("off"),
+				Crossfade:   intptr(0),
+			},
+			changed: true,
+			update:  "Update",
+		}},
+		"Update/error": {{
+			status:  func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			want:    `{}`,
+			err:     context.DeadlineExceeded,
+			cache:   &api.Status{},
+			changed: false,
+			update:  "Update",
+		}},
+		"Update/volume": {{
+			status: func() (map[string]string, error) { return map[string]string{"volume": "55"}, nil },
+			want:   `{"volume":55,"repeat":false,"random":false,"single":false,"oneshot":false,"consume":false,"state":"","song_elapsed":0,"replay_gain":"off","crossfade":0}`,
+			cache: &api.Status{
+				Volume:      intptr(55),
+				Repeat:      boolptr(false),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr(""),
+				SongElapsed: float64ptr(0),
+				ReplayGain:  strptr("off"),
+				Crossfade:   intptr(0),
+			},
+			changed: true,
+			update:  "Update",
+		}},
+		"Update/normal": {{
+			status: func() (map[string]string, error) {
+				return map[string]string{
+					"repeat":         "1",
+					"random":         "0",
+					"single":         "0",
+					"consume":        "0",
+					"partition":      "default",
+					"playlist":       "4374",
+					"playlistlength": "64",
+					"mixrampdb":      "0.000000",
+					"state":          "pause",
+					"song":           "30",
+					"songid":         "4337",
+					"time":           "250:400",
+					"elapsed":        "249.952",
+					"bitrate":        "1070",
+					"duration":       "399.733",
+					"audio":          "44100:16:2",
+					"nextsong":       "31",
+					"nextsongid":     "4338",
+				}, nil
+			},
+			want: `{"repeat":true,"random":false,"single":false,"oneshot":false,"consume":false,"state":"pause","song_elapsed":249.952,"replay_gain":"off","crossfade":0}`,
+			cache: &api.Status{
+				Repeat:      boolptr(true),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr("pause"),
+				SongElapsed: float64ptr(249.952),
+				ReplayGain:  strptr("off"),
+				Crossfade:   intptr(0),
+				Song:        intptr(30),
+			},
+			changed: true,
+			update:  "Update",
+		}},
+		"UpdateOptions/empty": {{
+			status:           func() (map[string]string, error) { return map[string]string{}, nil },
+			replayGainStatus: func() (map[string]string, error) { return map[string]string{}, nil },
+			want:             `{"repeat":false,"random":false,"single":false,"oneshot":false,"consume":false,"state":"","song_elapsed":0,"replay_gain":"off","crossfade":0}`,
+			cache: &api.Status{
+				Repeat:      boolptr(false),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr(""),
+				SongElapsed: float64ptr(0),
+				ReplayGain:  strptr("off"),
+				Crossfade:   intptr(0),
+			},
+			changed: true,
+			update:  "UpdateOptions",
+		}},
+		"UpdateOptions/error": {{
+			replayGainStatus: func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			want:             `{}`,
+			err:              context.DeadlineExceeded,
+			cache:            &api.Status{},
+			changed:          false,
+			update:           "UpdateOptions",
+		}, {
+			status:           func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			replayGainStatus: func() (map[string]string, error) { return map[string]string{}, nil },
+			want:             `{}`,
+			err:              context.DeadlineExceeded,
+			cache:            &api.Status{},
+			changed:          false,
+			update:           "UpdateOptions",
+		}},
+		"UpdateOptions/replay_gain_mode": {{
+			status:           func() (map[string]string, error) { return map[string]string{}, nil },
+			replayGainStatus: func() (map[string]string, error) { return map[string]string{"replay_gain_mode": "track"}, nil },
+			want:             `{"repeat":false,"random":false,"single":false,"oneshot":false,"consume":false,"state":"","song_elapsed":0,"replay_gain":"track","crossfade":0}`,
+			cache: &api.Status{
+				Repeat:      boolptr(false),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr(""),
+				SongElapsed: float64ptr(0),
+				ReplayGain:  strptr("track"),
+				Crossfade:   intptr(0),
+			},
+			changed: true,
+			update:  "UpdateOptions",
+		}},
+		"UpdateOptions/normal/replay_gain_mode": {{
+			status: func() (map[string]string, error) {
+				return map[string]string{
+					"repeat":         "1",
+					"random":         "0",
+					"single":         "0",
+					"consume":        "0",
+					"partition":      "default",
+					"playlist":       "4374",
+					"playlistlength": "64",
+					"mixrampdb":      "0.000000",
+					"state":          "pause",
+					"song":           "30",
+					"songid":         "4337",
+					"time":           "250:400",
+					"elapsed":        "249.952",
+					"bitrate":        "1070",
+					"duration":       "399.733",
+					"audio":          "44100:16:2",
+					"nextsong":       "31",
+					"nextsongid":     "4338",
+				}, nil
+			},
+			replayGainStatus: func() (map[string]string, error) { return map[string]string{"replay_gain_mode": "track"}, nil },
+			want:             `{"repeat":true,"random":false,"single":false,"oneshot":false,"consume":false,"state":"pause","song_elapsed":249.952,"replay_gain":"track","crossfade":0}`,
+			cache: &api.Status{
+				Repeat:      boolptr(true),
+				Random:      boolptr(false),
+				Single:      boolptr(false),
+				Oneshot:     boolptr(false),
+				Consume:     boolptr(false),
+				State:       strptr("pause"),
+				SongElapsed: float64ptr(249.952),
+				ReplayGain:  strptr("track"),
+				Crossfade:   intptr(0),
+				Song:        intptr(30),
+			},
+			changed: true,
+			update:  "UpdateOptions",
+		}},
+	} {
+		t.Run(label, func(t *testing.T) {
+			mpd := &mpdStatus{t: t}
+			h, err := api.NewStatusHandler(mpd)
+			if err != nil {
+				t.Fatalf("api.NewLibrarySongs() = %v, %v", h, err)
+			}
+			for i := range tt {
+				t.Run(fmt.Sprint(i), func(t *testing.T) {
+					mpd.status = tt[i].status
+					mpd.replayGainStatus = tt[i].replayGainStatus
+					switch tt[i].update {
+					case "Update":
+						if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
+							t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
+						}
+					case "UpdateOptions":
+						if err := h.UpdateOptions(context.TODO()); !errors.Is(err, tt[i].err) {
+							t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
+						}
+					default:
+						t.Fatalf("fixme: invalid test case: unsupported update type: %s", tt[i].update)
+					}
+					r := httptest.NewRequest(http.MethodGet, "/", nil)
+					w := httptest.NewRecorder()
+					h.ServeHTTP(w, r)
+					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
+						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
+					}
+					if cache := h.Cache(); !reflect.DeepEqual(cache, tt[i].cache) {
+						t.Errorf("got cache\n%v; want\n%v", cache, tt[i].cache)
+					}
+					changed := false
+					select {
+					case <-h.Changed():
+						changed = true
+					default:
+					}
+					if changed != tt[i].changed {
+						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
+					}
+
+				})
+			}
+		})
+	}
+}
+
+func TestStatusHandlerPOST(t *testing.T) {
+	for label, tt := range map[string]struct {
+		body           string
+		wantStatus     int
+		want           string
+		setVol         func(*testing.T, int) error
+		repeat         func(*testing.T, bool) error
+		random         func(*testing.T, bool) error
+		single         func(*testing.T, bool) error
+		oneShot        func() error
+		consume        func(*testing.T, bool) error
+		seekCur        func(*testing.T, float64) error
+		replayGainMode func(*testing.T, string) error
+		crossfade      func(*testing.T, time.Duration) error
+		play           func(*testing.T, int) error
+		pause          func(*testing.T, bool) error
+		next           func() error
+		previous       func() error
+	}{
+		"state/play": {
+			body:       `{"state":"play"}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			play: func(t *testing.T, i int) error {
+				t.Helper()
+				if i != -1 {
+					t.Errorf("got mpd.Play(ctx, %d); want mpd.Play(ctx, -1)", i)
+				}
+				return nil
+			},
+		},
+		"state/pause": {
+			body:       `{"state":"pause"}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			pause: func(t *testing.T, b bool) error {
+				t.Helper()
+				if b != true {
+					t.Errorf("got mpd.Pause(ctx, %v); want mpd.Pause(ctx, true)", b)
+				}
+				return nil
+			},
+		},
+		"state/next": {
+			body:       `{"state":"next"}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			next:       func() error { return nil },
+		},
+		"state/next/error": {
+			body:       `{"state":"next"}`,
+			wantStatus: http.StatusInternalServerError,
+			want:       fmt.Sprintf(`{"error":%q}`, context.DeadlineExceeded.Error()),
+			next:       func() error { return context.DeadlineExceeded },
+		},
+		"state/previous": {
+			body:       `{"state":"previous"}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			previous:   func() error { return nil },
+		},
+		"state/previous/error": {
+			body:       `{"state":"previous"}`,
+			wantStatus: http.StatusInternalServerError,
+			want:       fmt.Sprintf(`{"error":%q}`, context.DeadlineExceeded.Error()),
+			previous:   func() error { return context.DeadlineExceeded },
+		},
+		"state/unknown/error": {
+			body:       `{"state":"unknown"}`,
+			wantStatus: http.StatusBadRequest,
+			want:       `{"error":"unknown state: unknown"}`,
+		},
+	} {
+		t.Run(label, func(t *testing.T) {
+			mpd := &mpdStatus{
+				t:              t,
+				setVol:         tt.setVol,
+				repeat:         tt.repeat,
+				random:         tt.random,
+				single:         tt.single,
+				oneShot:        tt.oneShot,
+				consume:        tt.consume,
+				seekCur:        tt.seekCur,
+				replayGainMode: tt.replayGainMode,
+				crossfade:      tt.crossfade,
+				play:           tt.play,
+				pause:          tt.pause,
+				next:           tt.next,
+				previous:       tt.previous,
+			}
+			h, err := api.NewStatusHandler(mpd)
+			if err != nil {
+				t.Fatalf("api.NewStatusHandler(mpd) = %v, %v", h, err)
+			}
+			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if status, got := w.Result().StatusCode, w.Body.String(); status != tt.wantStatus || got != tt.want {
+				t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, tt.wantStatus, tt.want)
+			}
+		})
+	}
+}
+
+type mpdStatus struct {
+	t                *testing.T
+	status           func() (map[string]string, error)
+	replayGainStatus func() (map[string]string, error)
+	setVol           func(*testing.T, int) error
+	repeat           func(*testing.T, bool) error
+	random           func(*testing.T, bool) error
+	single           func(*testing.T, bool) error
+	oneShot          func() error
+	consume          func(*testing.T, bool) error
+	seekCur          func(*testing.T, float64) error
+	replayGainMode   func(*testing.T, string) error
+	crossfade        func(*testing.T, time.Duration) error
+	play             func(*testing.T, int) error
+	pause            func(*testing.T, bool) error
+	next             func() error
+	previous         func() error
+}
+
+func (m *mpdStatus) Status(context.Context) (map[string]string, error) {
+	m.t.Helper()
+	if m.status == nil {
+		m.t.Fatal("no Status mock function")
+	}
+	return m.status()
+}
+func (m *mpdStatus) ReplayGainStatus(context.Context) (map[string]string, error) {
+	m.t.Helper()
+	if m.replayGainStatus == nil {
+		m.t.Fatal("no ReplayGainStatus mock function")
+	}
+	return m.replayGainStatus()
+}
+func (m *mpdStatus) SetVol(ctx context.Context, a int) error {
+	m.t.Helper()
+	if m.setVol == nil {
+		m.t.Fatal("no SetVol mock function")
+	}
+	return m.setVol(m.t, a)
+}
+func (m *mpdStatus) Repeat(ctx context.Context, a bool) error {
+	m.t.Helper()
+	if m.repeat == nil {
+		m.t.Fatal("no Repeat mock function")
+	}
+	return m.repeat(m.t, a)
+}
+func (m *mpdStatus) Random(ctx context.Context, a bool) error {
+	m.t.Helper()
+	if m.random == nil {
+		m.t.Fatal("no Random mock function")
+	}
+	return m.random(m.t, a)
+}
+func (m *mpdStatus) Single(ctx context.Context, a bool) error {
+	m.t.Helper()
+	if m.single == nil {
+		m.t.Fatal("no Single mock function")
+	}
+	return m.single(m.t, a)
+}
+func (m *mpdStatus) OneShot(context.Context) error {
+	m.t.Helper()
+	if m.oneShot == nil {
+		m.t.Fatal("no OneShot mock function")
+	}
+	return m.oneShot()
+}
+func (m *mpdStatus) Consume(ctx context.Context, a bool) error {
+	m.t.Helper()
+	if m.consume == nil {
+		m.t.Fatal("no Consume mock function")
+	}
+	return m.consume(m.t, a)
+}
+func (m *mpdStatus) SeekCur(ctx context.Context, a float64) error {
+	m.t.Helper()
+	if m.seekCur == nil {
+		m.t.Fatal("no SeekCur mock function")
+	}
+	return m.seekCur(m.t, a)
+}
+func (m *mpdStatus) ReplayGainMode(ctx context.Context, a string) error {
+	m.t.Helper()
+	if m.replayGainMode == nil {
+		m.t.Fatal("no ReplayGainMode mock function")
+	}
+	return m.replayGainMode(m.t, a)
+}
+func (m *mpdStatus) Crossfade(ctx context.Context, a time.Duration) error {
+	m.t.Helper()
+	if m.crossfade == nil {
+		m.t.Fatal("no Crossfade mock function")
+	}
+	return m.crossfade(m.t, a)
+}
+func (m *mpdStatus) Play(ctx context.Context, a int) error {
+	m.t.Helper()
+	if m.play == nil {
+		m.t.Fatal("no Play mock function")
+	}
+	return m.play(m.t, a)
+}
+func (m *mpdStatus) Pause(ctx context.Context, a bool) error {
+	m.t.Helper()
+	if m.pause == nil {
+		m.t.Fatal("no Pause mock function")
+	}
+	return m.pause(m.t, a)
+}
+func (m *mpdStatus) Next(context.Context) error {
+	m.t.Helper()
+	if m.next == nil {
+		m.t.Fatal("no Next mock function")
+	}
+	return m.next()
+}
+func (m *mpdStatus) Previous(context.Context) error {
+	m.t.Helper()
+	if m.previous == nil {
+		m.t.Fatal("no Previous mock function")
+	}
+	return m.previous()
+}
+
+func intptr(s int) *int {
+	return &s
+}
+func float64ptr(s float64) *float64 {
+	return &s
+}
+func boolptr(s bool) *bool {
+	return &s
+}
+func strptr(s string) *string {
+	return &s
+}

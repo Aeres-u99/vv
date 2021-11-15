@@ -48,7 +48,7 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 		apiMusicStats:                a.stats,
 		apiMusicPlaylist:             a.PlaylistHandler(),
 		apiMusicPlaylistSongs:        a.PlaylistSongsHandler(),
-		apiMusicPlaylistSongsCurrent: a.PlaylistSongsCurrentHandler(),
+		apiMusicPlaylistSongsCurrent: a.current,
 		apiMusicLibrary:              a.LibraryHandler(),
 		apiMusicLibrarySongs:         a.LibrarySongsHandler(),
 		apiMusicOutputs:              a.outputs,

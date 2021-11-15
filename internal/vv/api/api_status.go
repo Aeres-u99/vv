@@ -53,6 +53,7 @@ func (a *api) StatusHandler() http.HandlerFunc {
 	go eventDispatch(pathAPIVersion, a.version.Changed())
 	go eventDispatch(pathAPIMusicOutputs, a.outputs.Changed())
 	go eventDispatch(pathAPIMusicStats, a.stats.Changed())
+	go eventDispatch(pathAPIMusicPlaylistSongsCurrent, a.current.Changed())
 	go func() {
 		for e := range a.jsonCache.Event() {
 			mu.Lock()

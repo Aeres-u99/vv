@@ -25,13 +25,12 @@ func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]strin
 }
 
 type LibrarySongs struct {
-	mpd        MPDLibrarySongsAPI
-	cache      *cache
-	changed    chan struct{}
-	songsHook  func([]map[string][]string) []map[string][]string
-	eventHooks []func([]map[string][]string)
-	data       []map[string][]string
-	mu         sync.RWMutex
+	mpd       MPDLibrarySongsAPI
+	cache     *cache
+	changed   chan struct{}
+	songsHook func([]map[string][]string) []map[string][]string
+	data      []map[string][]string
+	mu        sync.RWMutex
 }
 
 func (a *LibrarySongs) Update(ctx context.Context) error {
@@ -56,7 +55,7 @@ func (a *LibrarySongs) Update(ctx context.Context) error {
 
 func (a *LibrarySongs) Cache() []map[string][]string {
 	a.mu.RLock()
-	a.mu.RUnlock()
+	defer a.mu.RUnlock()
 	return a.data
 }
 

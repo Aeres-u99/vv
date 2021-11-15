@@ -28,6 +28,7 @@ type api struct {
 	neighbors     *Neighbors
 	version       *Version
 	stats         *Stats
+	current       *PlaylistSongsCurrentHandler
 
 	playlist     []map[string][]string
 	library      []map[string][]string
@@ -86,6 +87,11 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		playlistInfo: &httpPlaylistInfo{},
 		stopCh:       make(chan struct{}),
 	}
+	current, err := NewPlaylistSongsCurrentHandler(cl, func(s map[string][]string) map[string][]string { s, _ = a.convSong(s); return s })
+	if err != nil {
+		return nil, err
+	}
+	a.current = current
 	if err := a.runCacheUpdater(ctx); err != nil {
 		return nil, err
 	}
@@ -97,7 +103,7 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 	if err := a.version.Update(); err != nil {
 		return err
 	}
-	all := []func(context.Context) error{a.updateLibrarySongs, a.updatePlaylistSongs, a.updateOptions, a.updateStatus, a.updatePlaylistSongsCurrent, a.outputs.Update, a.stats.Update, a.storage.Update, a.neighbors.Update}
+	all := []func(context.Context) error{a.updateLibrarySongs, a.updatePlaylistSongs, a.updateOptions, a.updateStatus, a.current.Update, a.outputs.Update, a.stats.Update, a.storage.Update, a.neighbors.Update}
 	if !a.config.skipInit {
 		for _, v := range all {
 			if err := v(ctx); err != nil {
@@ -114,7 +120,7 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 			a.jsonCache.SetIfModified(pathAPIMusicImages, &httpImages{Updating: updating})
 			if !updating {
 				ctx, cancel := context.WithTimeout(context.Background(), a.config.BackgroundTimeout)
-				a.updatePlaylistSongsCurrent(ctx)
+				a.current.Update(ctx)
 				a.updateLibrarySongs(ctx)
 				// h.updatePlaylistSongs(ctx) // client does not use this api
 				cancel()
@@ -144,7 +150,7 @@ func (a *api) runCacheUpdater(ctx context.Context) error {
 				a.updatePlaylistSongs(ctx)
 			case "player":
 				a.updateStatus(ctx)
-				a.updatePlaylistSongsCurrent(ctx)
+				a.current.Update(ctx)
 				a.stats.Update(ctx)
 			case "mixer":
 				a.updateStatus(ctx)

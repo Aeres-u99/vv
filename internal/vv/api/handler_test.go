@@ -122,7 +122,7 @@ func TestHandler(t *testing.T) {
 				},
 				{
 					method: http.MethodGet, path: "/api/music/playlist/songs/current",
-					want: map[int]string{http.StatusOK: ""},
+					want: map[int]string{http.StatusOK: "{}"},
 				},
 				{
 					method: http.MethodGet, path: "/api/music/outputs",
