@@ -24,25 +24,25 @@ type ImagesHandler struct {
 	imgBatch *imgBatch
 	mu       sync.RWMutex
 	library  []map[string][]string
-	update   chan bool
+	changed  chan bool
 }
 
 func NewImagesHandler(img []ImageProvider) (*ImagesHandler, error) {
-	c, err := newCache(map[string]*httpStorage{})
+	c, err := newCache(&httpImages{})
 	if err != nil {
 		return nil, err
 	}
 	ret := &ImagesHandler{
 		cache:    c,
 		imgBatch: newImgBatch(img),
-		update:   make(chan bool, 10),
+		changed:  make(chan bool, 10),
 	}
 	go func() {
 		for e := range ret.imgBatch.Event() {
 			ret.cache.SetIfModified(&httpImages{Updating: e})
-			ret.update <- e
+			ret.changed <- e
 		}
-		close(ret.update)
+		close(ret.changed)
 	}()
 	return ret, nil
 }
@@ -104,14 +104,9 @@ func (a *ImagesHandler) UpdateLibrarySongs(songs []map[string][]string) {
 	a.mu.Unlock()
 }
 
-// Event returns batch state event chan.
-func (a *ImagesHandler) Event() <-chan bool {
-	return a.imgBatch.Event()
-}
-
 // Changed returns response body changes event chan.
-func (a *ImagesHandler) Changed() <-chan struct{} {
-	return a.cache.Changed()
+func (a *ImagesHandler) Changed() <-chan bool {
+	return a.changed
 }
 
 // Close closes update event chan.

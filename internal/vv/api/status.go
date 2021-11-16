@@ -189,6 +189,7 @@ func (a *StatusHandler) Changed() <-chan struct{} {
 // Close closes update event chan.
 func (a *StatusHandler) Close() {
 	a.cache.Close()
+	close(a.changed)
 }
 
 func (a *StatusHandler) post(w http.ResponseWriter, r *http.Request) {

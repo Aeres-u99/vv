@@ -171,3 +171,13 @@ func (a *Playlist) UpdateLibrarySongs(i []map[string][]string) {
 	a.librarySort = nil
 	a.mu.Unlock()
 }
+
+// Changed returns library song list update event chan.
+func (a *Playlist) Changed() <-chan struct{} {
+	return a.cache.Changed()
+}
+
+// Close closes update event chan.
+func (a *Playlist) Close() {
+	a.cache.Close()
+}

@@ -15,11 +15,12 @@ import (
 )
 
 type cache struct {
-	changed chan struct{}
-	json    []byte
-	gzjson  []byte
-	date    time.Time
-	mu      sync.RWMutex
+	changed  chan struct{}
+	changedB bool
+	json     []byte
+	gzjson   []byte
+	date     time.Time
+	mu       sync.RWMutex
 }
 
 func newCache(i interface{}) (*cache, error) {
@@ -28,17 +29,21 @@ func newCache(i interface{}) (*cache, error) {
 		return nil, err
 	}
 	c := &cache{
-		changed: make(chan struct{}, 1),
-		json:    b,
-		gzjson:  gz,
-		date:    time.Now().UTC(),
+		changed:  make(chan struct{}, 1),
+		changedB: true,
+		json:     b,
+		gzjson:   gz,
+		date:     time.Now().UTC(),
 	}
 	return c, nil
 }
 
 func (c *cache) Close() {
 	c.mu.Lock()
-	close(c.changed)
+	if c.changedB {
+		close(c.changed)
+		c.changedB = false
+	}
 	c.mu.Unlock()
 }
 
@@ -102,9 +107,11 @@ func (c *cache) set(i interface{}, force bool) (bool, error) {
 		c.json = n
 		c.date = time.Now().UTC()
 		c.gzjson = gz
-		select {
-		case c.changed <- struct{}{}:
-		default:
+		if c.changedB {
+			select {
+			case c.changed <- struct{}{}:
+			default:
+			}
 		}
 		return true, nil
 	}

@@ -58,7 +58,17 @@ func (a *Library) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, setUpdateTime(r, now))
 }
 
-func (a *Library) UpdateStatus(ctx context.Context, updating bool) error {
+func (a *Library) UpdateStatus(updating bool) error {
 	_, err := a.cache.SetIfModified(&httpLibraryInfo{Updating: updating})
 	return err
+}
+
+// Changed returns library song list update event chan.
+func (a *Library) Changed() <-chan struct{} {
+	return a.cache.Changed()
+}
+
+// Close closes update event chan.
+func (a *Library) Close() {
+	a.cache.Close()
 }

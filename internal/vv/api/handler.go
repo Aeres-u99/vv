@@ -1,3 +1,5 @@
+//go:build v1
+
 package api
 
 import (
