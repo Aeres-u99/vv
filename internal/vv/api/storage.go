@@ -10,10 +10,6 @@ import (
 	"github.com/meiraka/vv/internal/mpd"
 )
 
-const (
-	pathAPIMusicStorage = "/api/music/storage"
-)
-
 type httpStorage struct {
 	URI      *string `json:"uri,omitempty"`
 	Updating bool    `json:"updating,omitempty"`

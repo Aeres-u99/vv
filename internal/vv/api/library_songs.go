@@ -10,12 +10,12 @@ type MPDLibrarySongs interface {
 	ListAllInfo(context.Context, string) ([]map[string][]string, error)
 }
 
-func NewLibrarySongsHandler(mpd MPDLibrarySongs, songsHook func([]map[string][]string) []map[string][]string) (*LibrarySongs, error) {
+func NewLibrarySongsHandler(mpd MPDLibrarySongs, songsHook func([]map[string][]string) []map[string][]string) (*LibrarySongsHandler, error) {
 	cache, err := newCache([]map[string][]string{})
 	if err != nil {
 		return nil, err
 	}
-	return &LibrarySongs{
+	return &LibrarySongsHandler{
 		mpd:       mpd,
 		cache:     cache,
 		changed:   make(chan struct{}, cap(cache.Changed())),
@@ -24,7 +24,7 @@ func NewLibrarySongsHandler(mpd MPDLibrarySongs, songsHook func([]map[string][]s
 
 }
 
-type LibrarySongs struct {
+type LibrarySongsHandler struct {
 	mpd       MPDLibrarySongs
 	cache     *cache
 	changed   chan struct{}
@@ -33,7 +33,7 @@ type LibrarySongs struct {
 	mu        sync.RWMutex
 }
 
-func (a *LibrarySongs) Update(ctx context.Context) error {
+func (a *LibrarySongsHandler) Update(ctx context.Context) error {
 	l, err := a.mpd.ListAllInfo(ctx, "/")
 	if err != nil {
 		return err
@@ -53,23 +53,23 @@ func (a *LibrarySongs) Update(ctx context.Context) error {
 	return nil
 }
 
-func (a *LibrarySongs) Cache() []map[string][]string {
+func (a *LibrarySongsHandler) Cache() []map[string][]string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.data
 }
 
 // ServeHTTP responses library song list as json format.
-func (a *LibrarySongs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *LibrarySongsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, r)
 }
 
 // Changed returns library song list update event chan.
-func (a *LibrarySongs) Changed() <-chan struct{} {
+func (a *LibrarySongsHandler) Changed() <-chan struct{} {
 	return a.changed
 }
 
 // Close closes update event chan.
-func (a *LibrarySongs) Close() {
+func (a *LibrarySongsHandler) Close() {
 	a.cache.Close()
 }

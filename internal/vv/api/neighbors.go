@@ -8,10 +8,6 @@ import (
 	"github.com/meiraka/vv/internal/mpd"
 )
 
-const (
-	pathAPIMusicStorageNeighbors = "/api/music/storage/neighbors"
-)
-
 // NeighborsHandler provides neighbor storage name and uri.
 type NeighborsHandler struct {
 	mpd interface {

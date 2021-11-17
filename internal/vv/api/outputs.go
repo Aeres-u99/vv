@@ -11,11 +11,6 @@ import (
 	"github.com/meiraka/vv/internal/mpd"
 )
 
-const (
-	pathAPIMusicOutputs       = "/api/music/outputs"
-	pathAPIMusicOutputsStream = "/api/music/outputs/stream"
-)
-
 type httpOutput struct {
 	Name       string               `json:"name"`
 	Plugin     string               `json:"plugin,omitempty"`

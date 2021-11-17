@@ -106,8 +106,6 @@ func TestNeighbors(t *testing.T) {
 			}},
 		} {
 			t.Run(label, func(t *testing.T) {
-				cache := newJSONCache()
-				defer cache.Close()
 				f := make(mpdNeighborsFuncs, 1)
 				h, err := NewNeighborsHandler(f)
 				if err != nil {

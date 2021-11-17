@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-const pathAPIMusicStats = "/api/music/stats"
-
 type httpMusicStats struct {
 	Uptime          int `json:"uptime"`
 	Playtime        int `json:"playtime"`

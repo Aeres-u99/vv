@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const pathAPIMusicLibrary = "/api/music/library"
-
 type httpLibraryInfo struct {
 	Updating bool `json:"updating"`
 }

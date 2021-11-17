@@ -11,10 +11,6 @@ import (
 	"github.com/meiraka/vv/internal/songs"
 )
 
-const (
-	pathAPIMusicImages = "/api/music/images"
-)
-
 type httpImages struct {
 	Updating bool `json:"updating"`
 }

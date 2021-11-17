@@ -6,10 +6,6 @@ import (
 	"runtime"
 )
 
-const (
-	pathAPIVersion = "/api/version"
-)
-
 var goVersion = fmt.Sprintf("%s %s %s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 
 type httpVersion struct {
