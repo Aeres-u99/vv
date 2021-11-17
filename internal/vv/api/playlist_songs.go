@@ -6,16 +6,25 @@ import (
 	"sync"
 )
 
-type MPDPlaylistSongsAPI interface {
+type MPDPlaylistSongs interface {
 	PlaylistInfo(context.Context) ([]map[string][]string, error)
 }
 
-func NewPlaylistSongs(mpd MPDPlaylistSongsAPI, songsHook func([]map[string][]string) []map[string][]string) (*PlaylistSongs, error) {
+type PlaylistSongsHandler struct {
+	mpd       MPDPlaylistSongs
+	cache     *cache
+	changed   chan struct{}
+	songsHook func([]map[string][]string) []map[string][]string
+	data      []map[string][]string
+	mu        sync.RWMutex
+}
+
+func NewPlaylistSongsHandler(mpd MPDPlaylistSongs, songsHook func([]map[string][]string) []map[string][]string) (*PlaylistSongsHandler, error) {
 	cache, err := newCache([]map[string][]string{})
 	if err != nil {
 		return nil, err
 	}
-	return &PlaylistSongs{
+	return &PlaylistSongsHandler{
 		mpd:       mpd,
 		cache:     cache,
 		changed:   make(chan struct{}, cap(cache.Changed())),
@@ -24,16 +33,7 @@ func NewPlaylistSongs(mpd MPDPlaylistSongsAPI, songsHook func([]map[string][]str
 
 }
 
-type PlaylistSongs struct {
-	mpd       MPDPlaylistSongsAPI
-	cache     *cache
-	changed   chan struct{}
-	songsHook func([]map[string][]string) []map[string][]string
-	data      []map[string][]string
-	mu        sync.RWMutex
-}
-
-func (a *PlaylistSongs) Update(ctx context.Context) error {
+func (a *PlaylistSongsHandler) Update(ctx context.Context) error {
 	l, err := a.mpd.PlaylistInfo(ctx)
 	if err != nil {
 		return err
@@ -55,23 +55,23 @@ func (a *PlaylistSongs) Update(ctx context.Context) error {
 	return nil
 }
 
-func (a *PlaylistSongs) Cache() []map[string][]string {
+func (a *PlaylistSongsHandler) Cache() []map[string][]string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.data
 }
 
 // ServeHTTP responses neighbors list as json format.
-func (a *PlaylistSongs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *PlaylistSongsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, r)
 }
 
 // Changed returns neighbors list update event chan.
-func (a *PlaylistSongs) Changed() <-chan struct{} {
+func (a *PlaylistSongsHandler) Changed() <-chan struct{} {
 	return a.changed
 }
 
 // Close closes update event chan.
-func (a *PlaylistSongs) Close() {
+func (a *PlaylistSongsHandler) Close() {
 	a.cache.Close()
 }

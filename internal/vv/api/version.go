@@ -18,30 +18,30 @@ type httpVersion struct {
 	MPD string `json:"mpd"`
 }
 
-type Version struct {
-	mpd     MPDVersionAPI
+type VersionHandler struct {
+	mpd     MPDVersion
 	cache   *cache
 	version string
 }
 
-// MPDVersionAPI represents mpd api for Version API.
-type MPDVersionAPI interface {
+// MPDVersion represents mpd api for Version API.
+type MPDVersion interface {
 	Version() string
 }
 
-func NewVersion(mpd MPDVersionAPI, version string) (*Version, error) {
+func NewVersionHandler(mpd MPDVersion, version string) (*VersionHandler, error) {
 	c, err := newCache(map[string]*httpVersion{})
 	if err != nil {
 		return nil, err
 	}
-	return &Version{
+	return &VersionHandler{
 		mpd:     mpd,
 		cache:   c,
 		version: version,
 	}, nil
 }
 
-func (a *Version) Update() error {
+func (a *VersionHandler) Update() error {
 	mpdVersion := a.mpd.Version()
 	if len(mpdVersion) == 0 {
 		mpdVersion = "unknown"
@@ -50,22 +50,22 @@ func (a *Version) Update() error {
 	return err
 }
 
-func (a *Version) UpdateNoMPD() error {
+func (a *VersionHandler) UpdateNoMPD() error {
 	_, err := a.cache.SetIfModified(&httpVersion{App: a.version, Go: goVersion})
 	return err
 }
 
 // ServeHTTP responses version as json format.
-func (a *Version) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *VersionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, r)
 }
 
 // Changed returns version update event chan.
-func (a *Version) Changed() <-chan struct{} {
+func (a *VersionHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Version) Close() {
+func (a *VersionHandler) Close() {
 	a.cache.Close()
 }

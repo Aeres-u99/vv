@@ -41,7 +41,7 @@ func TestVersionGet(t *testing.T) {
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdVersionAPI{t: t}
-			h, err := api.NewVersion(mpd, appVersion)
+			h, err := api.NewVersionHandler(mpd, appVersion)
 			if err != nil {
 				t.Fatalf("failed to init Neighbors: %v", err)
 			}

@@ -6,11 +6,11 @@ import (
 	"sync"
 )
 
-type MPDLibrarySongsAPI interface {
+type MPDLibrarySongs interface {
 	ListAllInfo(context.Context, string) ([]map[string][]string, error)
 }
 
-func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]string) []map[string][]string) (*LibrarySongs, error) {
+func NewLibrarySongsHandler(mpd MPDLibrarySongs, songsHook func([]map[string][]string) []map[string][]string) (*LibrarySongs, error) {
 	cache, err := newCache([]map[string][]string{})
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func NewLibrarySongs(mpd MPDLibrarySongsAPI, songsHook func([]map[string][]strin
 }
 
 type LibrarySongs struct {
-	mpd       MPDLibrarySongsAPI
+	mpd       MPDLibrarySongs
 	cache     *cache
 	changed   chan struct{}
 	songsHook func([]map[string][]string) []map[string][]string

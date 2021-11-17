@@ -109,7 +109,7 @@ func TestNeighbors(t *testing.T) {
 				cache := newJSONCache()
 				defer cache.Close()
 				f := make(mpdNeighborsFuncs, 1)
-				h, err := NewNeighbors(f)
+				h, err := NewNeighborsHandler(f)
 				if err != nil {
 					t.Fatalf("failed to init Neighbors: %v", err)
 				}

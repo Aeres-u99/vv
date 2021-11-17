@@ -22,13 +22,13 @@ type api struct {
 	upgrader  websocket.Upgrader
 	imgBatch  *imgBatch
 
-	outputs       *Outputs
+	outputs       *OutputsHandler
 	outputsStream *OutputsStreamHandler
-	storage       *Storage
-	neighbors     *Neighbors
-	version       *Version
-	stats         *Stats
-	current       *PlaylistSongsCurrentHandler
+	storage       *StorageHandler
+	neighbors     *NeighborsHandler
+	version       *VersionHandler
+	stats         *StatsHandler
+	current       *CurrentSongHandler
 
 	playlist     []map[string][]string
 	library      []map[string][]string
@@ -47,19 +47,19 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		c.BackgroundTimeout = 30 * time.Second
 	}
 	cache := newJSONCache()
-	storage, err := NewStorage(cl)
+	storage, err := NewStorageHandler(cl)
 	if err != nil {
 		return nil, err
 	}
-	neighbors, err := NewNeighbors(cl)
+	neighbors, err := NewNeighborsHandler(cl)
 	if err != nil {
 		return nil, err
 	}
-	version, err := NewVersion(cl, c.AppVersion)
+	version, err := NewVersionHandler(cl, c.AppVersion)
 	if err != nil {
 		return nil, err
 	}
-	outputs, err := NewOutputs(cl, c.AudioProxy)
+	outputs, err := NewOutputsHandler(cl, c.AudioProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 	if err != nil {
 		return nil, err
 	}
-	stats, err := NewStats(cl)
+	stats, err := NewStatsHandler(cl)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func newAPI(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*ap
 		playlistInfo: &httpPlaylistInfo{},
 		stopCh:       make(chan struct{}),
 	}
-	current, err := NewPlaylistSongsCurrentHandler(cl, func(s map[string][]string) map[string][]string { s, _ = a.convSong(s); return s })
+	current, err := NewCurrentSongHandler(cl, func(s map[string][]string) map[string][]string { s, _ = a.convSong(s); return s })
 	if err != nil {
 		return nil, err
 	}

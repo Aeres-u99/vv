@@ -21,9 +21,9 @@ type httpPlaylistInfo struct {
 	Must    int          `json:"must,omitempty"`
 }
 
-// Playlist provides current playlist sort function.
-type Playlist struct {
-	mpd         MPDPlaylistAPI
+// PlaylistHandler provides current playlist sort function.
+type PlaylistHandler struct {
+	mpd         MPDPlaylist
 	library     []map[string][]string
 	librarySort []map[string][]string
 	playlist    []map[string][]string
@@ -34,19 +34,19 @@ type Playlist struct {
 	config      *Config
 }
 
-type MPDPlaylistAPI interface {
+type MPDPlaylist interface {
 	Play(context.Context, int) error
 	ExecCommandList(context.Context, *mpd.CommandList) error
 }
 
-func NewPlaylist(mpd MPDPlaylistAPI, config *Config) (*Playlist, error) {
+func NewPlaylistHandler(mpd MPDPlaylist, config *Config) (*PlaylistHandler, error) {
 	c, err := newCache(&httpPlaylistInfo{})
 	if err != nil {
 		return nil, err
 	}
 	sem := make(chan struct{}, 1)
 	sem <- struct{}{}
-	return &Playlist{
+	return &PlaylistHandler{
 		mpd:    mpd,
 		cache:  c,
 		data:   &httpPlaylistInfo{},
@@ -55,7 +55,7 @@ func NewPlaylist(mpd MPDPlaylistAPI, config *Config) (*Playlist, error) {
 	}, nil
 }
 
-func (a *Playlist) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *PlaylistHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		a.cache.ServeHTTP(w, r)
 		return
@@ -124,7 +124,7 @@ func (a *Playlist) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func (a *Playlist) UpdateCurrent(pos int) error {
+func (a *PlaylistHandler) UpdateCurrent(pos int) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	data := &httpPlaylistInfo{
@@ -141,7 +141,7 @@ func (a *Playlist) UpdateCurrent(pos int) error {
 	return nil
 }
 
-func (a *Playlist) updateSort(sort []string, filters [][2]*string, must int) error {
+func (a *PlaylistHandler) updateSort(sort []string, filters [][2]*string, must int) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	data := &httpPlaylistInfo{
@@ -158,7 +158,7 @@ func (a *Playlist) updateSort(sort []string, filters [][2]*string, must int) err
 	return nil
 }
 
-func (a *Playlist) UpdatePlaylistSongs(i []map[string][]string) {
+func (a *PlaylistHandler) UpdatePlaylistSongs(i []map[string][]string) {
 	a.mu.Lock()
 	a.playlist = i
 	unsort := a.data.Sort != nil && !songs.SortEqual(a.playlist, a.librarySort)
@@ -171,7 +171,7 @@ func (a *Playlist) UpdatePlaylistSongs(i []map[string][]string) {
 	}
 }
 
-func (a *Playlist) UpdateLibrarySongs(i []map[string][]string) {
+func (a *PlaylistHandler) UpdateLibrarySongs(i []map[string][]string) {
 	a.mu.Lock()
 	// FIXME: copy library
 	a.library = i
@@ -180,11 +180,11 @@ func (a *Playlist) UpdateLibrarySongs(i []map[string][]string) {
 }
 
 // Changed returns library song list update event chan.
-func (a *Playlist) Changed() <-chan struct{} {
+func (a *PlaylistHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Playlist) Close() {
+func (a *PlaylistHandler) Close() {
 	a.cache.Close()
 }

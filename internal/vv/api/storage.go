@@ -19,32 +19,32 @@ type httpStorage struct {
 	Updating bool    `json:"updating,omitempty"`
 }
 
-// MPDStorageAPI represents mpd api for Storage API.
-type MPDStorageAPI interface {
+// MPDStorage represents mpd api for Storage API.
+type MPDStorage interface {
 	ListMounts(context.Context) ([]map[string]string, error)
 	Mount(context.Context, string, string) error
 	Unmount(context.Context, string) error
 	Update(context.Context, string) (map[string]string, error)
 }
 
-// Storage provides mount, unmount, list storage api.
-type Storage struct {
-	mpd   MPDStorageAPI
+// StorageHandler provides mount, unmount, list storage api.
+type StorageHandler struct {
+	mpd   MPDStorage
 	cache *cache
 }
 
-func NewStorage(mpd MPDStorageAPI) (*Storage, error) {
+func NewStorageHandler(mpd MPDStorage) (*StorageHandler, error) {
 	c, err := newCache(map[string]*httpStorage{})
 	if err != nil {
 		return nil, err
 	}
-	return &Storage{
+	return &StorageHandler{
 		mpd:   mpd,
 		cache: c,
 	}, nil
 }
 
-func (a *Storage) Update(ctx context.Context) error {
+func (a *StorageHandler) Update(ctx context.Context) error {
 	ret := map[string]*httpStorage{}
 	ms, err := a.mpd.ListMounts(ctx)
 	if err != nil {
@@ -66,7 +66,7 @@ func (a *Storage) Update(ctx context.Context) error {
 }
 
 // ServeHTTP responses storage api.
-func (a *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *StorageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		a.cache.ServeHTTP(w, r)
 		return
@@ -132,11 +132,11 @@ func (a *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Changed returns storage list update event chan.
-func (a *Storage) Changed() <-chan struct{} {
+func (a *StorageHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Storage) Close() {
+func (a *StorageHandler) Close() {
 	a.cache.Close()
 }

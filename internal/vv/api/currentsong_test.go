@@ -31,7 +31,7 @@ func TestGetPlaylistSongsCurrent(t *testing.T) {
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdPlaylistSongsCurrent{}
-			h, err := api.NewPlaylistSongsCurrentHandler(mpd, songHook)
+			h, err := api.NewCurrentSongHandler(mpd, songHook)
 			if err != nil {
 				t.Fatalf("api.NewPlaylistSongsCurrentHandler() = %v, %v", h, err)
 			}

@@ -36,25 +36,25 @@ type MPDOutputs interface {
 	Outputs(context.Context) ([]*mpd.Output, error)
 }
 
-type Outputs struct {
+type OutputsHandler struct {
 	mpd   MPDOutputs
 	cache *cache
 	proxy map[string]string
 }
 
-func NewOutputs(mpd MPDOutputs, proxy map[string]string) (*Outputs, error) {
+func NewOutputsHandler(mpd MPDOutputs, proxy map[string]string) (*OutputsHandler, error) {
 	c, err := newCache(map[string]*httpOutput{})
 	if err != nil {
 		return nil, err
 	}
-	return &Outputs{
+	return &OutputsHandler{
 		mpd:   mpd,
 		cache: c,
 		proxy: proxy,
 	}, nil
 }
 
-func (a *Outputs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *OutputsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		a.cache.ServeHTTP(w, r)
 		return
@@ -106,7 +106,7 @@ func (a *Outputs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *Outputs) Update(ctx context.Context) error {
+func (a *OutputsHandler) Update(ctx context.Context) error {
 	l, err := a.mpd.Outputs(ctx)
 	if err != nil {
 		return err
@@ -143,12 +143,12 @@ func (a *Outputs) Update(ctx context.Context) error {
 }
 
 // Changed returns outputs update event chan.
-func (a *Outputs) Changed() <-chan struct{} {
+func (a *OutputsHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Outputs) Close() {
+func (a *OutputsHandler) Close() {
 	a.cache.Close()
 }
 

@@ -12,30 +12,30 @@ const (
 	pathAPIMusicStorageNeighbors = "/api/music/storage/neighbors"
 )
 
-// Neighbors provides neighbor storage name and uri.
-type Neighbors struct {
+// NeighborsHandler provides neighbor storage name and uri.
+type NeighborsHandler struct {
 	mpd interface {
 		ListNeighbors(context.Context) ([]map[string]string, error)
 	}
 	cache *cache
 }
 
-// NewNeighbors initilize Neighbors cache with mpd connection.
-func NewNeighbors(mpd interface {
+// NewNeighborsHandler initilize Neighbors cache with mpd connection.
+func NewNeighborsHandler(mpd interface {
 	ListNeighbors(context.Context) ([]map[string]string, error)
-}) (*Neighbors, error) {
+}) (*NeighborsHandler, error) {
 	c, err := newCache(map[string]*httpStorage{})
 	if err != nil {
 		return nil, err
 	}
-	return &Neighbors{
+	return &NeighborsHandler{
 		mpd:   mpd,
 		cache: c,
 	}, nil
 }
 
 // Update updates neighbors list.
-func (a *Neighbors) Update(ctx context.Context) error {
+func (a *NeighborsHandler) Update(ctx context.Context) error {
 	ret := map[string]*httpStorage{}
 	ms, err := a.mpd.ListNeighbors(ctx)
 	if err != nil {
@@ -57,16 +57,16 @@ func (a *Neighbors) Update(ctx context.Context) error {
 }
 
 // ServeHTTP responses neighbors list as json format.
-func (a *Neighbors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *NeighborsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, r)
 }
 
 // Changed returns neighbors list update event chan.
-func (a *Neighbors) Changed() <-chan struct{} {
+func (a *NeighborsHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Neighbors) Close() {
+func (a *NeighborsHandler) Close() {
 	a.cache.Close()
 }

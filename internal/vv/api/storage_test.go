@@ -92,7 +92,7 @@ func TestStorageGet(t *testing.T) {
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdStorageAPI{t: t}
-			h, err := api.NewStorage(mpd)
+			h, err := api.NewStorageHandler(mpd)
 			if err != nil {
 				t.Fatalf("failed to init Storage: %v", err)
 			}
@@ -300,7 +300,7 @@ func TestStoragePOST(t *testing.T) {
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdStorageAPI{t: t, listMounts: tt.listMounts, mount: tt.mount, unmount: tt.unmount, update: tt.update}
-			h, err := api.NewStorage(mpd)
+			h, err := api.NewStorageHandler(mpd)
 			if err != nil {
 				t.Fatalf("failed to init Storage: %v", err)
 			}

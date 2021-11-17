@@ -26,15 +26,15 @@ type Handler struct {
 	apiMusicImages               *ImagesHandler
 	apiMusicLibrary              *LibraryHandler
 	apiMusicLibrarySongs         *LibrarySongs
-	apiMusicOutputs              *Outputs
+	apiMusicOutputs              *OutputsHandler
 	apiMusicOutputsStream        *OutputsStreamHandler
-	apiMusicPlaylist             *Playlist
-	apiMusicPlaylistSongs        *PlaylistSongs
-	apiMusicPlaylistSongsCurrent *PlaylistSongsCurrentHandler
-	apiMusicStats                *Stats
-	apiMusicStorage              *Storage
-	apiMusicStorageNeighbors     *Neighbors
-	apiVersion                   *Version
+	apiMusicPlaylist             *PlaylistHandler
+	apiMusicPlaylistSongs        *PlaylistSongsHandler
+	apiMusicPlaylistSongsCurrent *CurrentSongHandler
+	apiMusicStats                *StatsHandler
+	apiMusicStorage              *StorageHandler
+	apiMusicStorageNeighbors     *NeighborsHandler
+	apiVersion                   *VersionHandler
 	songHooks                    []func(s map[string][]string) map[string][]string
 	songsHooks                   []func(s []map[string][]string) []map[string][]string
 	closable                     []interface{ Close() }
@@ -69,12 +69,12 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	}
 	h.closable = append(h.closable, h.apiMusicLibrary)
 
-	if h.apiMusicLibrarySongs, err = NewLibrarySongs(cl, h.songsHook); err != nil {
+	if h.apiMusicLibrarySongs, err = NewLibrarySongsHandler(cl, h.songsHook); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicLibrarySongs)
 
-	if h.apiMusicOutputs, err = NewOutputs(cl, c.AudioProxy); err != nil {
+	if h.apiMusicOutputs, err = NewOutputsHandler(cl, c.AudioProxy); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicOutputs)
@@ -84,36 +84,36 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	}
 	h.stoppable = append(h.stoppable, h.apiMusicOutputsStream)
 
-	if h.apiMusicPlaylist, err = NewPlaylist(cl, c); err != nil {
+	if h.apiMusicPlaylist, err = NewPlaylistHandler(cl, c); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicPlaylist)
 
-	if h.apiMusicPlaylistSongs, err = NewPlaylistSongs(cl, h.songsHook); err != nil {
+	if h.apiMusicPlaylistSongs, err = NewPlaylistSongsHandler(cl, h.songsHook); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicPlaylistSongs)
 
-	if h.apiMusicPlaylistSongsCurrent, err = NewPlaylistSongsCurrentHandler(cl, h.songHook); err != nil {
+	if h.apiMusicPlaylistSongsCurrent, err = NewCurrentSongHandler(cl, h.songHook); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicPlaylistSongsCurrent)
 
-	if h.apiMusicStats, err = NewStats(cl); err != nil {
+	if h.apiMusicStats, err = NewStatsHandler(cl); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicStats)
 
-	if h.apiMusicStorage, err = NewStorage(cl); err != nil {
+	if h.apiMusicStorage, err = NewStorageHandler(cl); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicStorage)
-	if h.apiMusicStorageNeighbors, err = NewNeighbors(cl); err != nil {
+	if h.apiMusicStorageNeighbors, err = NewNeighborsHandler(cl); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicStorageNeighbors)
 
-	if h.apiVersion, err = NewVersion(cl, c.AppVersion); err != nil {
+	if h.apiVersion, err = NewVersionHandler(cl, c.AppVersion); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiVersion)

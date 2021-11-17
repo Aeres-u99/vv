@@ -22,30 +22,30 @@ type MPDStats interface {
 	Stats(context.Context) (map[string]string, error)
 }
 
-// Stats provides mpd stats.
-type Stats struct {
+// StatsHandler provides mpd stats.
+type StatsHandler struct {
 	mpd   MPDStats
 	cache *cache
 }
 
-// NewStats initilize Stats cache with mpd connection.
-func NewStats(mpd MPDStats) (*Stats, error) {
+// NewStatsHandler initilize Stats cache with mpd connection.
+func NewStatsHandler(mpd MPDStats) (*StatsHandler, error) {
 	c, err := newCache(&httpMusicStats{})
 	if err != nil {
 		return nil, err
 	}
-	return &Stats{
+	return &StatsHandler{
 		mpd:   mpd,
 		cache: c,
 	}, nil
 }
 
-func (a *Stats) Update(ctx context.Context) error {
+func (a *StatsHandler) Update(ctx context.Context) error {
 	err := a.update(ctx)
 	return err
 }
 
-func (a *Stats) update(ctx context.Context) error {
+func (a *StatsHandler) update(ctx context.Context) error {
 	s, err := a.mpd.Stats(ctx)
 	if err != nil {
 		return err
@@ -98,16 +98,16 @@ func (a *Stats) update(ctx context.Context) error {
 }
 
 // ServeHTTP responses stats as json format.
-func (a *Stats) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, r)
 }
 
 // Changed returns stats update event chan.
-func (a *Stats) Changed() <-chan struct{} {
+func (a *StatsHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Stats) Close() {
+func (a *StatsHandler) Close() {
 	a.cache.Close()
 }
