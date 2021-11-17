@@ -57,7 +57,6 @@ func (a *OutputsStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		case <-ctx.Done():
 		case <-a.stopCh:
 			// disconnect audio stream by stop()
-			log.Println("disconnecting audio stream")
 			cancel()
 		}
 	}()

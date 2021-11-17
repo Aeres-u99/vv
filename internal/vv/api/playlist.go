@@ -93,6 +93,9 @@ func (a *Playlist) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cl.Play(newpos)
 	if !update {
 		a.updateSort(req.Sort, filters, req.Must)
+		a.mu.Lock()
+		a.cache.SetIfModified(a.data)
+		a.mu.Unlock()
 		now := time.Now().UTC()
 		ctx := r.Context()
 		if err := a.mpd.Play(ctx, newpos); err != nil {
@@ -147,10 +150,10 @@ func (a *Playlist) updateSort(sort []string, filters [][2]*string, must int) err
 		Filters: filters,
 		Must:    must,
 	}
-	_, err := a.cache.SetIfModified(data)
-	if err != nil {
-		return err
-	}
+	// _, err := a.cache.SetIfModified(data)
+	// if err != nil {
+	// 	return err
+	// }
 	a.data = data
 	return nil
 }
@@ -162,11 +165,15 @@ func (a *Playlist) UpdatePlaylistSongs(i []map[string][]string) {
 	a.mu.Unlock()
 	if unsort {
 		a.updateSort(nil, nil, 0)
+		a.mu.Lock()
+		a.cache.SetIfModified(a.data)
+		a.mu.Unlock()
 	}
 }
 
 func (a *Playlist) UpdateLibrarySongs(i []map[string][]string) {
 	a.mu.Lock()
+	// FIXME: copy library
 	a.library = i
 	a.librarySort = nil
 	a.mu.Unlock()

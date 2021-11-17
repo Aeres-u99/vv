@@ -120,6 +120,8 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	if err := h.apiVersion.Update(); err != nil {
 		return nil, err
 	}
+	// remove changed event for test stability
+	clearChan(h.apiVersion.Changed())
 	if err := h.hookEvent(ctx, w, c); err != nil {
 		return nil, err
 	}
@@ -186,6 +188,16 @@ func (h *Handler) Shutdown(ctx context.Context) error {
 	wg.Wait()
 	close(errs)
 	return <-errs
+}
+
+func clearChan(c <-chan struct{}) {
+	for {
+		select {
+		case <-c:
+		default:
+			return
+		}
+	}
 }
 
 func (h *Handler) hookEvent(ctx context.Context, w *mpd.Watcher, c *Config) error {
@@ -322,6 +334,12 @@ func (h *Handler) hookEvent(ctx context.Context, w *mpd.Watcher, c *Config) erro
 		if err := all[i](ctx); err != nil {
 			return err
 		}
+	}
+	// update handler cache before return.
+	// for test stability only
+	if pos := h.apiMusic.Cache().Song; pos != nil {
+		h.apiMusicPlaylist.UpdateCurrent(*pos)
+		clearChan(h.apiMusicPlaylist.Changed())
 	}
 	return nil
 }
