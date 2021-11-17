@@ -9,7 +9,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestOutputsHandler(t *testing.T) {
+func TestOutputsStreamHandlerGET(t *testing.T) {
 	normal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}))
 	defer normal.Close()

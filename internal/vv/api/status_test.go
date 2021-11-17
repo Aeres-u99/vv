@@ -14,7 +14,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestStatusHandlerGet(t *testing.T) {
+func TestStatusHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
 		status           func() (map[string]string, error)
 		replayGainStatus func() (map[string]string, error)

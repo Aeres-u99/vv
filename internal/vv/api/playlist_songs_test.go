@@ -12,7 +12,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestPlaylistSongsGet(t *testing.T) {
+func TestPlaylistSongsHandlerGET(t *testing.T) {
 	songsHook, randValue := testSongsHook()
 	for label, tt := range map[string][]struct {
 		playlistInfo func(*testing.T) ([]map[string][]string, error)
@@ -54,7 +54,7 @@ func TestPlaylistSongsGet(t *testing.T) {
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
-			mpd := &mpdPlaylistSongsAPI{t: t}
+			mpd := &mpdPlaylistSongs{t: t}
 
 			h, err := api.NewPlaylistSongsHandler(mpd, songsHook)
 			if err != nil {
@@ -95,12 +95,12 @@ func TestPlaylistSongsGet(t *testing.T) {
 
 }
 
-type mpdPlaylistSongsAPI struct {
+type mpdPlaylistSongs struct {
 	t            *testing.T
 	playlistInfo func(*testing.T) ([]map[string][]string, error)
 }
 
-func (m *mpdPlaylistSongsAPI) PlaylistInfo(ctx context.Context) ([]map[string][]string, error) {
+func (m *mpdPlaylistSongs) PlaylistInfo(ctx context.Context) ([]map[string][]string, error) {
 	m.t.Helper()
 	if m.playlistInfo == nil {
 		m.t.Fatal("no PlaylistInfo mock function")

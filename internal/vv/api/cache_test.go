@@ -45,7 +45,7 @@ func TestCacheSet(t *testing.T) {
 
 }
 
-func TestJSONCacheHandler(t *testing.T) {
+func TestCacheHandler(t *testing.T) {
 	b, err := newCache(nil)
 	if err != nil {
 		t.Fatalf("failed to init cache: %v", err)

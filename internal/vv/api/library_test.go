@@ -12,7 +12,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestLibraryHandlerGet(t *testing.T) {
+func TestLibraryHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
 		err          error
 		want         string

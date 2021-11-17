@@ -11,7 +11,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestVersionGet(t *testing.T) {
+func TestVersionHandlerGET(t *testing.T) {
 	goVersion := fmt.Sprintf("%s %s %s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	appVersion := "baz"
 	for label, tt := range map[string][]struct {
@@ -40,7 +40,7 @@ func TestVersionGet(t *testing.T) {
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
-			mpd := &mpdVersionAPI{t: t}
+			mpd := &mpdVersion{t: t}
 			h, err := api.NewVersionHandler(mpd, appVersion)
 			if err != nil {
 				t.Fatalf("failed to init Neighbors: %v", err)
@@ -82,12 +82,12 @@ func TestVersionGet(t *testing.T) {
 	}
 }
 
-type mpdVersionAPI struct {
+type mpdVersion struct {
 	t       *testing.T
 	version func() string
 }
 
-func (m *mpdVersionAPI) Version() string {
+func (m *mpdVersion) Version() string {
 	m.t.Helper()
 	if m.version == nil {
 		m.t.Fatal("no Version mock function")

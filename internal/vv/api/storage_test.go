@@ -13,7 +13,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestStorageGet(t *testing.T) {
+func TestStorageHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
 		listMounts func(*testing.T) ([]map[string]string, error)
 		err        error
@@ -91,7 +91,7 @@ func TestStorageGet(t *testing.T) {
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
-			mpd := &mpdStorageAPI{t: t}
+			mpd := &mpdStorage{t: t}
 			h, err := api.NewStorageHandler(mpd)
 			if err != nil {
 				t.Fatalf("failed to init Storage: %v", err)
@@ -123,7 +123,7 @@ func TestStorageGet(t *testing.T) {
 	}
 }
 
-func TestStoragePOST(t *testing.T) {
+func TestStorageHandlerPOST(t *testing.T) {
 	for label, tt := range map[string]struct {
 		body       string
 		status     int
@@ -299,7 +299,7 @@ func TestStoragePOST(t *testing.T) {
 		},
 	} {
 		t.Run(label, func(t *testing.T) {
-			mpd := &mpdStorageAPI{t: t, listMounts: tt.listMounts, mount: tt.mount, unmount: tt.unmount, update: tt.update}
+			mpd := &mpdStorage{t: t, listMounts: tt.listMounts, mount: tt.mount, unmount: tt.unmount, update: tt.update}
 			h, err := api.NewStorageHandler(mpd)
 			if err != nil {
 				t.Fatalf("failed to init Storage: %v", err)
@@ -329,7 +329,7 @@ func TestStoragePOST(t *testing.T) {
 
 }
 
-type mpdStorageAPI struct {
+type mpdStorage struct {
 	t          *testing.T
 	listMounts func(*testing.T) ([]map[string]string, error)
 	mount      func(*testing.T, string, string) error
@@ -337,28 +337,28 @@ type mpdStorageAPI struct {
 	update     func(*testing.T, string) (map[string]string, error)
 }
 
-func (a *mpdStorageAPI) ListMounts(context.Context) ([]map[string]string, error) {
+func (a *mpdStorage) ListMounts(context.Context) ([]map[string]string, error) {
 	if a.listMounts == nil {
 		a.t.Helper()
 		a.t.Fatal("no ListMounts mock function")
 	}
 	return a.listMounts(a.t)
 }
-func (a *mpdStorageAPI) Mount(ctx context.Context, b string, c string) error {
+func (a *mpdStorage) Mount(ctx context.Context, b string, c string) error {
 	if a.mount == nil {
 		a.t.Helper()
 		a.t.Fatal("no Mount mock function")
 	}
 	return a.mount(a.t, b, c)
 }
-func (a *mpdStorageAPI) Unmount(ctx context.Context, b string) error {
+func (a *mpdStorage) Unmount(ctx context.Context, b string) error {
 	if a.unmount == nil {
 		a.t.Helper()
 		a.t.Fatal("no Unmount mock function")
 	}
 	return a.unmount(a.t, b)
 }
-func (a *mpdStorageAPI) Update(ctx context.Context, b string) (map[string]string, error) {
+func (a *mpdStorage) Update(ctx context.Context, b string) (map[string]string, error) {
 	if a.update == nil {
 		a.t.Helper()
 		a.t.Fatal("no Update mock function")

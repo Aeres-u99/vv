@@ -12,7 +12,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestOutputsHandlerGet(t *testing.T) {
+func TestOutputsHandlerGET(t *testing.T) {
 	proxy := map[string]string{"Ogg Stream": "localhost:8080/"}
 	for label, tt := range map[string][]struct {
 		outputs func() ([]*mpd.Output, error)

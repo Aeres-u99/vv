@@ -13,7 +13,7 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestGetPlaylistSongsCurrent(t *testing.T) {
+func TestCurrentSongHandlerGET(t *testing.T) {
 	songHook, randValue := testSongHook()
 	for label, tt := range map[string][]struct {
 		currentSong func() (map[string][]string, error)

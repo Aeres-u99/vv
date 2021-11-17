@@ -70,7 +70,7 @@ func TestLibrarySongsGet(t *testing.T) {
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
-			mpd := &mpdLibrarySongsAPI{t: t}
+			mpd := &mpdLibrarySongs{t: t}
 			h, err := api.NewLibrarySongsHandler(mpd, songsHook)
 			if err != nil {
 				t.Fatalf("api.NewLibrarySongs() = %v, %v", h, err)
@@ -120,12 +120,12 @@ func testSongsHook() (func(s []map[string][]string) []map[string][]string, strin
 	}, key
 }
 
-type mpdLibrarySongsAPI struct {
+type mpdLibrarySongs struct {
 	t           *testing.T
 	listAllInfo func(*testing.T, string) ([]map[string][]string, error)
 }
 
-func (m *mpdLibrarySongsAPI) ListAllInfo(ctx context.Context, s string) ([]map[string][]string, error) {
+func (m *mpdLibrarySongs) ListAllInfo(ctx context.Context, s string) ([]map[string][]string, error) {
 	m.t.Helper()
 	if m.listAllInfo == nil {
 		m.t.Fatal("no ListAllInfo mock function")
