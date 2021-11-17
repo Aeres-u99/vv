@@ -58,6 +58,7 @@ type Handler struct {
 	shutdownable                 []interface{ Shutdown(context.Context) error }
 }
 
+// NewHandler creates Handler and initialize mpd cache data.
 func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) (*Handler, error) {
 	if c == nil {
 		c = &Config{}
@@ -144,7 +145,7 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	return h, nil
 }
 
-// ServeHTTP implements http.Handler.
+// ServeHTTP serves vv json api.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case pathAPIVersion:
@@ -178,7 +179,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Stop stops handlers.
+// Stop stops handlers which cannot stop by (*http.Server) Shutdown.
 func (h *Handler) Stop() {
 	for i := range h.stoppable {
 		h.stoppable[i].Stop()
