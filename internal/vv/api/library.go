@@ -14,27 +14,27 @@ type httpLibraryInfo struct {
 	Updating bool `json:"updating"`
 }
 
-type MPDLibraryAPI interface {
+type MPDLibrary interface {
 	Update(context.Context, string) (map[string]string, error)
 }
 
-type Library struct {
-	mpd   MPDLibraryAPI
+type LibraryHandler struct {
+	mpd   MPDLibrary
 	cache *cache
 }
 
-func NewLibrary(mpd MPDLibraryAPI) (*Library, error) {
+func NewLibraryHandler(mpd MPDLibrary) (*LibraryHandler, error) {
 	c, err := newCache(&httpLibraryInfo{})
 	if err != nil {
 		return nil, err
 	}
-	return &Library{
+	return &LibraryHandler{
 		mpd:   mpd,
 		cache: c,
 	}, nil
 }
 
-func (a *Library) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *LibraryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		a.cache.ServeHTTP(w, r)
 		return
@@ -58,17 +58,17 @@ func (a *Library) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.cache.ServeHTTP(w, setUpdateTime(r, now))
 }
 
-func (a *Library) UpdateStatus(updating bool) error {
+func (a *LibraryHandler) UpdateStatus(updating bool) error {
 	_, err := a.cache.SetIfModified(&httpLibraryInfo{Updating: updating})
 	return err
 }
 
 // Changed returns library song list update event chan.
-func (a *Library) Changed() <-chan struct{} {
+func (a *LibraryHandler) Changed() <-chan struct{} {
 	return a.cache.Changed()
 }
 
 // Close closes update event chan.
-func (a *Library) Close() {
+func (a *LibraryHandler) Close() {
 	a.cache.Close()
 }

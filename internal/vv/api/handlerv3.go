@@ -24,7 +24,7 @@ type Config struct {
 type Handler struct {
 	apiMusic                     *StatusHandler
 	apiMusicImages               *ImagesHandler
-	apiMusicLibrary              *Library
+	apiMusicLibrary              *LibraryHandler
 	apiMusicLibrarySongs         *LibrarySongs
 	apiMusicOutputs              *Outputs
 	apiMusicOutputsStream        *OutputsStreamHandler
@@ -64,7 +64,7 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 	h.closable = append(h.closable, h.apiMusicImages)
 	h.shutdownable = append(h.shutdownable, h.apiMusicImages)
 
-	if h.apiMusicLibrary, err = NewLibrary(cl); err != nil {
+	if h.apiMusicLibrary, err = NewLibraryHandler(cl); err != nil {
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicLibrary)
