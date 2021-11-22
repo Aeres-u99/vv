@@ -90,11 +90,11 @@ func (b *imgBatch) update(songs []map[string][]string, force bool) error {
 	default:
 		return errAlreadyUpdating
 	}
+	select {
+	case b.e <- true:
+	default:
+	}
 	go func() {
-		select {
-		case b.e <- true:
-		default:
-		}
 		defer func() { b.sem <- struct{}{} }()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

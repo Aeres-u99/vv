@@ -86,8 +86,11 @@ func (a *ImagesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	a.mu.RLock()
 	library := a.library
-	a.mu.Unlock()
-	a.imgBatch.Rescan(library)
+	a.mu.RUnlock()
+	if err := a.imgBatch.Rescan(library); err != nil {
+		writeHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
 	now := time.Now().UTC()
 	r.Method = http.MethodGet
 	a.cache.ServeHTTP(w, setUpdateTime(r, now))
