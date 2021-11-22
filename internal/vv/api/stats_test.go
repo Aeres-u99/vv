@@ -48,6 +48,22 @@ func TestStatsHandlerGET(t *testing.T) {
 			want:    `{"uptime":0,"playtime":0,"artists":0,"albums":0,"songs":0,"library_playtime":0,"library_update":0}`,
 			changed: true,
 		}},
+		"error": {{
+			label: "prepare data",
+			stats: func() (map[string]string, error) {
+				return map[string]string{"uptime": "100"}, nil
+			},
+			want:    `{"uptime":100,"playtime":0,"artists":0,"albums":0,"songs":0,"library_playtime":0,"library_update":0}`,
+			changed: true,
+		}, {
+			label: "error",
+			stats: func() (map[string]string, error) {
+				return nil, errTest
+			},
+			err:     errTest,
+			want:    `{"uptime":100,"playtime":0,"artists":0,"albums":0,"songs":0,"library_playtime":0,"library_update":0}`,
+			changed: false,
+		}},
 	} {
 		t.Run(label, func(t *testing.T) {
 			mpd := &mpdStats{t: t}
