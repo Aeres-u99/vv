@@ -2,12 +2,20 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/meiraka/vv/internal/songs"
+)
+
+var (
+	// ErrAlreadyShutdown returns if already Shutdown is called
+	ErrAlreadyShutdown = errors.New("api: already shutdown")
+	// errAlreadyUpdating returns if already Update is called
+	errAlreadyUpdating = errors.New("api: update already started")
 )
 
 // ImageProvider represents http cover image image url api.

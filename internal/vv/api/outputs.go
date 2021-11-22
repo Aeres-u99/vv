@@ -146,10 +146,3 @@ func (a *OutputsHandler) Changed() <-chan struct{} {
 func (a *OutputsHandler) Close() {
 	a.cache.Close()
 }
-
-func btoa(b bool, t, f string) string {
-	if b {
-		return t
-	}
-	return f
-}

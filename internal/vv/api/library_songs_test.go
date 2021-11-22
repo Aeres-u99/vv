@@ -12,16 +12,18 @@ import (
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
-func TestLibrarySongsGet(t *testing.T) {
+func TestLibrarySongsHandlerGet(t *testing.T) {
 	songsHook, randValue := testSongsHook()
 	for label, tt := range map[string][]struct {
+		label       string
 		listAllInfo func(*testing.T, string) ([]map[string][]string, error)
 		err         error
 		want        string
 		cache       []map[string][]string
 		changed     bool
 	}{
-		`empty`: {{
+		"ok": {{
+			label: "empty",
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
@@ -32,20 +34,8 @@ func TestLibrarySongsGet(t *testing.T) {
 			want:    `[]`,
 			cache:   []map[string][]string{},
 			changed: true,
-		}},
-		`exists`: {{
-			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
-				t.Helper()
-				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
-				}
-				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
-			},
-			want:    fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
-			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
-			changed: true,
-		}},
-		`error after exists`: {{
+		}, {
+			label: "some data",
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
@@ -57,14 +47,40 @@ func TestLibrarySongsGet(t *testing.T) {
 			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
 			changed: true,
 		}, {
+			label: "remove",
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
 					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
 				}
-				return nil, context.DeadlineExceeded
+				return []map[string][]string{}, nil
 			},
-			err:   context.DeadlineExceeded,
+			want:    `[]`,
+			cache:   []map[string][]string{},
+			changed: true,
+		}},
+		`error`: {{
+			label: "prepare data",
+			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
+				t.Helper()
+				if path != "/" {
+					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+				}
+				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
+			},
+			want:    fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
+			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
+			changed: true,
+		}, {
+			label: "error",
+			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
+				t.Helper()
+				if path != "/" {
+					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+				}
+				return nil, errTest
+			},
+			err:   errTest,
 			want:  fmt.Sprintf(`[{"%s":["%s"],"file":["/foo/bar.mp3"]}]`, randValue, randValue),
 			cache: []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
 		}},
@@ -76,7 +92,7 @@ func TestLibrarySongsGet(t *testing.T) {
 				t.Fatalf("api.NewLibrarySongs() = %v, %v", h, err)
 			}
 			for i := range tt {
-				t.Run(fmt.Sprint(i), func(t *testing.T) {
+				t.Run(tt[i].label, func(t *testing.T) {
 					mpd.listAllInfo = tt[i].listAllInfo
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
 						t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
@@ -85,22 +101,13 @@ func TestLibrarySongsGet(t *testing.T) {
 					r := httptest.NewRequest(http.MethodGet, "/", nil)
 					w := httptest.NewRecorder()
 					h.ServeHTTP(w, r)
-					if got := w.Body.String(); got != tt[i].want {
-						t.Errorf("ServeHTTP response: got\n%s; want\n%s", got, tt[i].want)
-					}
-					if got, want := w.Result().StatusCode, http.StatusOK; got != want {
-						t.Errorf("ServeHTTP response status: got %d; want %d", got, want)
+					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
+						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
 					}
 					if cache := h.Cache(); !reflect.DeepEqual(cache, tt[i].cache) {
 						t.Errorf("got cache\n%v; want\n%v", cache, tt[i].cache)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
 				})

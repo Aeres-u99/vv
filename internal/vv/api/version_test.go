@@ -66,13 +66,7 @@ func TestVersionHandlerGET(t *testing.T) {
 					if got, status, wantStatus := w.Body.String(), w.Result().StatusCode, http.StatusOK; got != tt[i].want || status != wantStatus {
 						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, wantStatus, tt[i].want)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
 				})

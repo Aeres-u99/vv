@@ -16,6 +16,7 @@ import (
 
 func TestStatusHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
+		label            string
 		status           func() (map[string]string, error)
 		replayGainStatus func() (map[string]string, error)
 		err              error
@@ -42,9 +43,9 @@ func TestStatusHandlerGET(t *testing.T) {
 			update:  "Update",
 		}},
 		"Update/error": {{
-			status:  func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			status:  func() (map[string]string, error) { return nil, errTest },
 			want:    `{}`,
-			err:     context.DeadlineExceeded,
+			err:     errTest,
 			cache:   &api.Status{},
 			changed: false,
 			update:  "Update",
@@ -125,17 +126,19 @@ func TestStatusHandlerGET(t *testing.T) {
 			update:  "UpdateOptions",
 		}},
 		"UpdateOptions/error": {{
-			replayGainStatus: func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			label:            "ReplayGainStatus",
+			replayGainStatus: func() (map[string]string, error) { return nil, errTest },
 			want:             `{}`,
-			err:              context.DeadlineExceeded,
+			err:              errTest,
 			cache:            &api.Status{},
 			changed:          false,
 			update:           "UpdateOptions",
 		}, {
-			status:           func() (map[string]string, error) { return nil, context.DeadlineExceeded },
+			label:            "Status",
+			status:           func() (map[string]string, error) { return nil, errTest },
 			replayGainStatus: func() (map[string]string, error) { return map[string]string{}, nil },
 			want:             `{}`,
-			err:              context.DeadlineExceeded,
+			err:              errTest,
 			cache:            &api.Status{},
 			changed:          false,
 			update:           "UpdateOptions",
@@ -206,7 +209,7 @@ func TestStatusHandlerGET(t *testing.T) {
 				t.Fatalf("api.NewLibrarySongs() = %v, %v", h, err)
 			}
 			for i := range tt {
-				t.Run(fmt.Sprint(i), func(t *testing.T) {
+				f := func(t *testing.T) {
 					mpd.status = tt[i].status
 					mpd.replayGainStatus = tt[i].replayGainStatus
 					switch tt[i].update {
@@ -216,7 +219,7 @@ func TestStatusHandlerGET(t *testing.T) {
 						}
 					case "UpdateOptions":
 						if err := h.UpdateOptions(context.TODO()); !errors.Is(err, tt[i].err) {
-							t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
+							t.Errorf("handler.UpdateOptions(context.TODO()) = %v; want %v", err, tt[i].err)
 						}
 					default:
 						t.Fatalf("fixme: invalid test case: unsupported update type: %s", tt[i].update)
@@ -230,17 +233,16 @@ func TestStatusHandlerGET(t *testing.T) {
 					if cache := h.Cache(); !reflect.DeepEqual(cache, tt[i].cache) {
 						t.Errorf("got cache\n%v; want\n%v", cache, tt[i].cache)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
 
-				})
+				}
+				if len(tt) != 1 {
+					t.Run(tt[i].label, f)
+				} else {
+					f(t)
+				}
 			}
 		})
 	}
@@ -298,8 +300,8 @@ func TestStatusHandlerPOST(t *testing.T) {
 		"state/next/error": {
 			body:       `{"state":"next"}`,
 			wantStatus: http.StatusInternalServerError,
-			want:       fmt.Sprintf(`{"error":%q}`, context.DeadlineExceeded.Error()),
-			next:       func() error { return context.DeadlineExceeded },
+			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
+			next:       func() error { return errTest },
 		},
 		"state/previous": {
 			body:       `{"state":"previous"}`,
@@ -310,8 +312,8 @@ func TestStatusHandlerPOST(t *testing.T) {
 		"state/previous/error": {
 			body:       `{"state":"previous"}`,
 			wantStatus: http.StatusInternalServerError,
-			want:       fmt.Sprintf(`{"error":%q}`, context.DeadlineExceeded.Error()),
-			previous:   func() error { return context.DeadlineExceeded },
+			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
+			previous:   func() error { return errTest },
 		},
 		"state/unknown/error": {
 			body:       `{"state":"unknown"}`,

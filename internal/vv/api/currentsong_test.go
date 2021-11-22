@@ -16,6 +16,7 @@ import (
 func TestCurrentSongHandlerGET(t *testing.T) {
 	songHook, randValue := testSongHook()
 	for label, tt := range map[string][]struct {
+		label       string
 		currentSong func() (map[string][]string, error)
 		err         error
 		want        string
@@ -23,10 +24,36 @@ func TestCurrentSongHandlerGET(t *testing.T) {
 		changed     bool
 	}{
 		"ok": {{
+			label:       "empty",
+			currentSong: func() (map[string][]string, error) { return map[string][]string{}, nil },
+			want:        fmt.Sprintf(`{"%s":["%s"]}`, randValue, randValue),
+			cache:       map[string][]string{randValue: {randValue}},
+			changed:     true,
+		}, {
+			label:       "some data",
 			currentSong: func() (map[string][]string, error) { return map[string][]string{"file": {"/foo/bar.mp3"}}, nil },
 			want:        fmt.Sprintf(`{"%s":["%s"],"file":["/foo/bar.mp3"]}`, randValue, randValue),
 			cache:       map[string][]string{"file": {"/foo/bar.mp3"}, randValue: {randValue}},
 			changed:     true,
+		}, {
+			label:       "remove",
+			currentSong: func() (map[string][]string, error) { return map[string][]string{}, nil },
+			want:        fmt.Sprintf(`{"%s":["%s"]}`, randValue, randValue),
+			cache:       map[string][]string{randValue: {randValue}},
+			changed:     true,
+		}},
+		"error": {{
+			label:       "prepare data",
+			currentSong: func() (map[string][]string, error) { return map[string][]string{"file": {"/foo/bar.mp3"}}, nil },
+			want:        fmt.Sprintf(`{"%s":["%s"],"file":["/foo/bar.mp3"]}`, randValue, randValue),
+			cache:       map[string][]string{"file": {"/foo/bar.mp3"}, randValue: {randValue}},
+			changed:     true,
+		}, {
+			label:       "error",
+			currentSong: func() (map[string][]string, error) { return nil, errTest },
+			err:         errTest,
+			want:        fmt.Sprintf(`{"%s":["%s"],"file":["/foo/bar.mp3"]}`, randValue, randValue),
+			cache:       map[string][]string{"file": {"/foo/bar.mp3"}, randValue: {randValue}},
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
@@ -36,7 +63,7 @@ func TestCurrentSongHandlerGET(t *testing.T) {
 				t.Fatalf("api.NewPlaylistSongsCurrentHandler() = %v, %v", h, err)
 			}
 			for i := range tt {
-				t.Run(fmt.Sprint(i), func(t *testing.T) {
+				t.Run(tt[i].label, func(t *testing.T) {
 					mpd.t = t
 					mpd.currentSong = tt[i].currentSong
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
@@ -45,19 +72,10 @@ func TestCurrentSongHandlerGET(t *testing.T) {
 					r := httptest.NewRequest(http.MethodGet, "/", nil)
 					w := httptest.NewRecorder()
 					h.ServeHTTP(w, r)
-					if got := w.Body.String(); got != tt[i].want {
-						t.Errorf("ServeHTTP response: got\n%s; want\n%s", got, tt[i].want)
+					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
+						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
 					}
-					if got, want := w.Result().StatusCode, http.StatusOK; got != want {
-						t.Errorf("ServeHTTP response status: got %d; want %d", got, want)
-					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
 				})

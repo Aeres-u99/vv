@@ -386,3 +386,11 @@ func writeHTTPError(w http.ResponseWriter, status int, err error) {
 func boolPtr(b bool) *bool                { return &b }
 func stringPtr(s string) *string          { return &s }
 func stringSlicePtr(s []string) *[]string { return &s }
+
+// btoa convert bool to string.
+func btoa(b bool, t, f string) string {
+	if b {
+		return t
+	}
+	return f
+}

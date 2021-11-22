@@ -3,7 +3,6 @@ package api_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,15 +14,18 @@ import (
 func TestOutputsHandlerGET(t *testing.T) {
 	proxy := map[string]string{"Ogg Stream": "localhost:8080/"}
 	for label, tt := range map[string][]struct {
+		label   string
 		outputs func() ([]*mpd.Output, error)
 		err     error
 		want    string
 		changed bool
 	}{
-		"empty/ok/empty": {{
+		"ok": {{
+			label:   "empty",
 			outputs: func() ([]*mpd.Output, error) { return []*mpd.Output{}, nil },
 			want:    `{}`,
 		}, {
+			label: "minimal",
 			outputs: func() ([]*mpd.Output, error) {
 				return []*mpd.Output{{
 					ID:      "0",
@@ -35,6 +37,7 @@ func TestOutputsHandlerGET(t *testing.T) {
 			want:    `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":true}}`,
 			changed: true,
 		}, {
+			label:   "remove",
 			outputs: func() ([]*mpd.Output, error) { return []*mpd.Output{}, nil },
 			want:    `{}`,
 			changed: true,
@@ -84,10 +87,7 @@ func TestOutputsHandlerGET(t *testing.T) {
 			changed: true,
 		}},
 		"error": {{
-			outputs: func() ([]*mpd.Output, error) { return nil, context.DeadlineExceeded },
-			err:     context.DeadlineExceeded,
-			want:    `{}`,
-		}, {
+			label: "prepare data",
 			outputs: func() ([]*mpd.Output, error) {
 				return []*mpd.Output{{
 					ID:         "0",
@@ -100,8 +100,9 @@ func TestOutputsHandlerGET(t *testing.T) {
 			want:    `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":true,"attributes":{"dop":false}}}`,
 			changed: true,
 		}, {
-			outputs: func() ([]*mpd.Output, error) { return nil, context.DeadlineExceeded },
-			err:     context.DeadlineExceeded,
+			label:   "error",
+			outputs: func() ([]*mpd.Output, error) { return nil, errTest },
+			err:     errTest,
 			want:    `{"0":{"name":"My ALSA Device","plugin":"alsa","enabled":true,"attributes":{"dop":false}}}`,
 		}},
 	} {
@@ -113,7 +114,7 @@ func TestOutputsHandlerGET(t *testing.T) {
 			}
 			defer h.Close()
 			for i := range tt {
-				t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
+				f := func(t *testing.T) {
 					mpd.t = t
 					mpd.outputs = tt[i].outputs
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
@@ -126,16 +127,15 @@ func TestOutputsHandlerGET(t *testing.T) {
 					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
 						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
-				})
+				}
+				if len(tt) != 1 {
+					t.Run(tt[i].label, f)
+				} else {
+					f(t)
+				}
 			}
 		})
 	}

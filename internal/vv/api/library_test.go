@@ -14,6 +14,7 @@ import (
 
 func TestLibraryHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
+		label        string
 		err          error
 		want         string
 		changed      bool
@@ -22,17 +23,17 @@ func TestLibraryHandlerGET(t *testing.T) {
 		"default": {{
 			want: `{"updating":false}`,
 		}},
-		"nochanged": {{
+		"updating": {{
+			label:        "false",
 			updateStatus: boolptr(false),
 			want:         `{"updating":false}`,
-		}},
-		"updating": {{
-			want: `{"updating":false}`,
 		}, {
+			label:        "true",
 			updateStatus: boolptr(true),
 			want:         `{"updating":true}`,
 			changed:      true,
 		}, {
+			label:        "true->false",
 			updateStatus: boolptr(false),
 			want:         `{"updating":false}`,
 			changed:      true,
@@ -46,7 +47,7 @@ func TestLibraryHandlerGET(t *testing.T) {
 			}
 			defer h.Close()
 			for i := range tt {
-				t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
+				f := func(t *testing.T) {
 					mpd.t = t
 					if tt[i].updateStatus != nil {
 						if err := h.UpdateStatus(*tt[i].updateStatus); !errors.Is(err, tt[i].err) {
@@ -59,16 +60,18 @@ func TestLibraryHandlerGET(t *testing.T) {
 					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
 						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
-				})
+				}
+				if len(tt) != 1 {
+					if tt[i].label == "" {
+						t.Fatalf("test definition error: no test label")
+					}
+					t.Run(tt[i].label, f)
+				} else {
+					f(t)
+				}
 			}
 		})
 	}
@@ -95,14 +98,14 @@ func TestLibraryHandlerPOST(t *testing.T) {
 		},
 		"updating/true/error": {
 			body:       `{"updating":true}`,
-			want:       fmt.Sprintf(`{"error":"%s"}`, context.DeadlineExceeded.Error()),
+			want:       fmt.Sprintf(`{"error":"%s"}`, errTest.Error()),
 			wantStatus: http.StatusInternalServerError,
 			update: func(t *testing.T, a string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; a != want {
 					t.Errorf("call (*mpd.MPD).Update(ctx, %q); want (*mpd.MPD).Update(ctx, %q)", a, want)
 				}
-				return nil, context.DeadlineExceeded
+				return nil, errTest
 			},
 		},
 		"updating/false": {

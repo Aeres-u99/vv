@@ -3,7 +3,6 @@ package api_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,26 +14,18 @@ import (
 
 func TestStorageHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
+		label      string
 		listMounts func(*testing.T) ([]map[string]string, error)
 		err        error
 		want       string
 		changed    bool
 	}{
-		`empty`: {{
+		`ok`: {{
+			label:      "empty",
 			listMounts: func(*testing.T) ([]map[string]string, error) { return []map[string]string{}, nil },
 			want:       "{}",
-		}},
-		`exists`: {{
-			listMounts: func(*testing.T) ([]map[string]string, error) {
-				return []map[string]string{
-					{"mount": "", "storage": "/home/foo/music"},
-					{"mount": "foo", "storage": "nfs://192.168.1.4/export/mp3"},
-				}, nil
-			},
-			want:    `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
-			changed: true,
-		}},
-		`removed`: {{
+		}, {
+			label: "minimal",
 			listMounts: func(*testing.T) ([]map[string]string, error) {
 				return []map[string]string{
 					{"mount": "", "storage": "/home/foo/music"},
@@ -44,16 +35,13 @@ func TestStorageHandlerGET(t *testing.T) {
 			want:    `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
 			changed: true,
 		}, {
+			label:      "removed",
 			listMounts: func(*testing.T) ([]map[string]string, error) { return []map[string]string{}, nil },
 			want:       "{}",
 			changed:    true,
 		}},
-		`error`: {{
-			listMounts: func(*testing.T) ([]map[string]string, error) { return nil, context.DeadlineExceeded },
-			err:        context.DeadlineExceeded,
-			want:       "{}",
-		}},
-		`error after exists`: {{
+		`error/other`: {{
+			label: "prepare data",
 			listMounts: func(*testing.T) ([]map[string]string, error) {
 				return []map[string]string{
 					{"mount": "", "storage": "/home/foo/music"},
@@ -63,17 +51,13 @@ func TestStorageHandlerGET(t *testing.T) {
 			want:    `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
 			changed: true,
 		}, {
-			listMounts: func(*testing.T) ([]map[string]string, error) { return nil, context.DeadlineExceeded },
-			err:        context.DeadlineExceeded,
+			label:      "error",
+			listMounts: func(*testing.T) ([]map[string]string, error) { return nil, errTest },
+			err:        errTest,
 			want:       `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
 		}},
-		`mpd error`: {{
-			listMounts: func(*testing.T) ([]map[string]string, error) {
-				return nil, &mpd.CommandError{ID: 5, Index: 0, Command: "listmounts", Message: "unknown command \"listmounts\""}
-			},
-			want: "{}",
-		}},
-		`mpd error after exists`: {{
+		`error/mpd`: {{
+			label: "prepare data",
 			listMounts: func(*testing.T) ([]map[string]string, error) {
 				return []map[string]string{
 					{"mount": "", "storage": "/home/foo/music"},
@@ -83,6 +67,7 @@ func TestStorageHandlerGET(t *testing.T) {
 			want:    `{"":{"uri":"/home/foo/music"},"foo":{"uri":"nfs://192.168.1.4/export/mp3"}}`,
 			changed: true,
 		}, {
+			label: "error",
 			listMounts: func(*testing.T) ([]map[string]string, error) {
 				return nil, &mpd.CommandError{ID: 5, Index: 0, Command: "listmounts", Message: "unknown command \"listmounts\""}
 			},
@@ -97,7 +82,7 @@ func TestStorageHandlerGET(t *testing.T) {
 				t.Fatalf("failed to init Storage: %v", err)
 			}
 			for i := range tt {
-				t.Run(fmt.Sprint(i), func(t *testing.T) {
+				f := func(t *testing.T) {
 					mpd.listMounts = tt[i].listMounts
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
 						t.Errorf("Update(ctx) = %v; want %v", err, tt[i].err)
@@ -105,19 +90,21 @@ func TestStorageHandlerGET(t *testing.T) {
 					r := httptest.NewRequest(http.MethodGet, "/", nil)
 					w := httptest.NewRecorder()
 					h.ServeHTTP(w, r)
-					if got := w.Body.String(); got != tt[i].want {
-						t.Errorf("ServeHTTP got %q; want %q", got, tt[i].want)
+					if status, got := w.Result().StatusCode, w.Body.String(); status != http.StatusOK || got != tt[i].want {
+						t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, http.StatusOK, tt[i].want)
 					}
-					changed := false
-					select {
-					case <-h.Changed():
-						changed = true
-					default:
-					}
-					if changed != tt[i].changed {
+					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
-				})
+				}
+				if len(tt) != 1 {
+					if tt[i].label == "" {
+						t.Fatalf("test definition error: no test label")
+					}
+					t.Run(tt[i].label, f)
+				} else {
+					f(t)
+				}
 			}
 		})
 	}
@@ -322,7 +309,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)
 			if got := w.Body.String(); got != tt.want || w.Result().StatusCode != tt.status {
-				t.Errorf("ServeHTTP got %d %q; want %d %q", w.Result().StatusCode, got, tt.status, tt.want)
+				t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", w.Result().StatusCode, got, tt.status, tt.want)
 			}
 		})
 	}
