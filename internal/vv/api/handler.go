@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/meiraka/vv/internal/mpd"
+	"github.com/meiraka/vv/internal/songs"
 )
 
 const (
@@ -362,6 +363,7 @@ func (h *Handler) hookEvent(ctx context.Context, w *mpd.Watcher, c *Config) erro
 }
 
 func (h *Handler) songHook(s map[string][]string) map[string][]string {
+	s = songs.AddTags(s)
 	for i := range h.songHooks {
 		s = h.songHooks[i](s)
 	}
@@ -369,10 +371,14 @@ func (h *Handler) songHook(s map[string][]string) map[string][]string {
 }
 
 func (h *Handler) songsHook(s []map[string][]string) []map[string][]string {
-	for i := range h.songsHooks {
-		s = h.songsHooks[i](s)
+	n := make([]map[string][]string, len(s))
+	for i := range s {
+		n[i] = songs.AddTags(s[i])
 	}
-	return s
+	for i := range h.songsHooks {
+		n = h.songsHooks[i](n)
+	}
+	return n
 }
 
 func writeHTTPError(w http.ResponseWriter, status int, err error) {

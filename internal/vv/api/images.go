@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/meiraka/vv/internal/songs"
 )
 
 type httpImages struct {
@@ -44,8 +42,6 @@ func NewImagesHandler(img []ImageProvider) (*ImagesHandler, error) {
 }
 
 func (a *ImagesHandler) ConvSong(s map[string][]string) (map[string][]string, bool) {
-	// TODO: move to another function
-	s = songs.AddTags(s)
 	delete(s, "cover")
 	cover, updated := a.imgBatch.GetURLs(s)
 	if len(cover) != 0 {
