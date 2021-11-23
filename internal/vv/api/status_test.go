@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/meiraka/vv/internal/vv/api"
 )
 
@@ -457,6 +458,30 @@ func TestStatusHandlerPOST(t *testing.T) {
 				t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, tt.wantStatus, tt.want)
 			}
 		})
+	}
+}
+
+func TestStatusHandlerWebSocket(t *testing.T) {
+	mpd := &mpdStatus{t: t}
+	h, err := api.NewStatusHandler(mpd)
+	if err != nil {
+		t.Fatalf("api.NewStatusHandler(mpd) = %v, %v", h, err)
+	}
+	defer h.Close()
+	ts := httptest.NewServer(h)
+	defer ts.Close()
+	ws, _, err := websocket.DefaultDialer.Dial(strings.Replace(ts.URL, "http://", "ws://", 1), nil)
+	if err != nil {
+		t.Fatalf("failed to connect websocket: %v", err)
+	}
+	defer ws.Close()
+	h.BroadCast("test")
+	ws.SetReadDeadline(time.Now().Add(time.Second))
+	if _, msg, err := ws.ReadMessage(); string(msg) != "ok" || err != nil {
+		t.Fatalf("got message: %s, %v, want: ok <nil>", msg, err)
+	}
+	if _, msg, err := ws.ReadMessage(); string(msg) != "test" || err != nil {
+		t.Fatalf("got message: %s, %v, want: test <nil>", msg, err)
 	}
 }
 
