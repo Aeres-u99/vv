@@ -27,7 +27,7 @@ func TestLibrarySongsHandlerGet(t *testing.T) {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+					t.Errorf("called mpd.ListAllInfo(ctx, %q); want mpd.ListAllInfo(ctx, %q)", path, "/")
 				}
 				return []map[string][]string{}, nil
 			},
@@ -39,7 +39,7 @@ func TestLibrarySongsHandlerGet(t *testing.T) {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+					t.Errorf("called mpd.ListAllInfo(ctx, %q); want mpd.ListAllInfo(ctx, %q)", path, "/")
 				}
 				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
 			},
@@ -51,7 +51,7 @@ func TestLibrarySongsHandlerGet(t *testing.T) {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+					t.Errorf("called mpd.ListAllInfo(ctx, %q); want mpd.ListAllInfo(ctx, %q)", path, "/")
 				}
 				return []map[string][]string{}, nil
 			},
@@ -64,7 +64,7 @@ func TestLibrarySongsHandlerGet(t *testing.T) {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+					t.Errorf("called mpd.ListAllInfo(ctx, %q); want mpd.ListAllInfo(ctx, %q)", path, "/")
 				}
 				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
 			},
@@ -76,7 +76,7 @@ func TestLibrarySongsHandlerGet(t *testing.T) {
 			listAllInfo: func(t *testing.T, path string) ([]map[string][]string, error) {
 				t.Helper()
 				if path != "/" {
-					t.Errorf("got mpd.ListAllInfo(..., %q); want mpd.ListAllInfo(..., %q)", path, "/")
+					t.Errorf("called mpd.ListAllInfo(ctx, %q); want mpd.ListAllInfo(ctx, %q)", path, "/")
 				}
 				return nil, errTest
 			},

@@ -137,14 +137,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			mount: func(t *testing.T, name string, uri string) error {
 				t.Helper()
 				if wantName, wantURI := "foo", "nfs://192.168.1.4/export/mp3"; name != wantName || uri != wantURI {
-					t.Errorf("got mpd.Mount(%q, %q); want mpd.Mount(%q, %q)", name, uri, wantName, wantURI)
+					t.Errorf("called mpd.Mount(ctx, %q, %q); want mpd.Mount(ctx, %q, %q)", name, uri, wantName, wantURI)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := "foo"; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return map[string]string{"updating_db": "1"}, nil
 			},
@@ -156,14 +156,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			mount: func(t *testing.T, name string, uri string) error {
 				t.Helper()
 				if wantName, wantURI := "foo", "nfs://192.168.1.4/export/mp3"; name != wantName || uri != wantURI {
-					t.Errorf("got mpd.Mount(%q, %q); want mpd.Mount(%q, %q)", name, uri, wantName, wantURI)
+					t.Errorf("called mpd.Mount(ctx, %q, %q); want mpd.Mount(ctx, %q, %q)", name, uri, wantName, wantURI)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := "foo"; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return nil, errTest
 			},
@@ -175,7 +175,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			mount: func(t *testing.T, name string, uri string) error {
 				t.Helper()
 				if wantName, wantURI := "foo", "nfs://192.168.1.4/export/mp3"; name != wantName || uri != wantURI {
-					t.Errorf("got mpd.Mount(%q, %q); want mpd.Mount(%q, %q)", name, uri, wantName, wantURI)
+					t.Errorf("called mpd.Mount(ctx, %q, %q); want mpd.Mount(ctx, %q, %q)", name, uri, wantName, wantURI)
 				}
 				return errTest
 			},
@@ -187,7 +187,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := "foo"; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return map[string]string{"updating_db": "1"}, nil
 			},
@@ -199,7 +199,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := "foo"; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return nil, errTest
 			},
@@ -211,14 +211,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			unmount: func(t *testing.T, name string) error {
 				t.Helper()
 				if wantName := "foo"; name != wantName {
-					t.Errorf("got mpd.Unmount(%q); want mpd.Unmount(%q)", name, wantName)
+					t.Errorf("called mpd.Unmount(ctx, %q); want mpd.Unmount(ctx, %q)", name, wantName)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return map[string]string{"updating_db": "1"}, nil
 			},
@@ -230,14 +230,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			unmount: func(t *testing.T, name string) error {
 				t.Helper()
 				if wantName := "foo"; name != wantName {
-					t.Errorf("got mpd.Unmount(%q); want mpd.Unmount(%q)", name, wantName)
+					t.Errorf("called mpd.Unmount(ctx, %q); want mpd.Unmount(ctx, %q)", name, wantName)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return map[string]string{"updating_db": "1"}, nil
 			},
@@ -249,14 +249,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			unmount: func(t *testing.T, name string) error {
 				t.Helper()
 				if wantName := "foo"; name != wantName {
-					t.Errorf("got mpd.Unmount(%q); want mpd.Unmount(%q)", name, wantName)
+					t.Errorf("called mpd.Unmount(ctx, %q); want mpd.Unmount(ctx, %q)", name, wantName)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return map[string]string{"updating_db": "1"}, nil
 			},
@@ -268,7 +268,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			unmount: func(t *testing.T, name string) error {
 				t.Helper()
 				if wantName := "foo"; name != wantName {
-					t.Errorf("got mpd.Unmount(%q); want mpd.Unmount(%q)", name, wantName)
+					t.Errorf("called mpd.Unmount(ctx, %q); want mpd.Unmount(ctx, %q)", name, wantName)
 				}
 				return errTest
 			},
@@ -280,14 +280,14 @@ func TestStorageHandlerPOST(t *testing.T) {
 			unmount: func(t *testing.T, name string) error {
 				t.Helper()
 				if wantName := "foo"; name != wantName {
-					t.Errorf("got mpd.Unmount(%q); want mpd.Unmount(%q)", name, wantName)
+					t.Errorf("called mpd.Unmount(ctx, %q); want mpd.Unmount(ctx, %q)", name, wantName)
 				}
 				return nil
 			},
 			update: func(t *testing.T, path string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; path != want {
-					t.Errorf("got mpd.Update(%q); want mpd.Update(%q)", path, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", path, want)
 				}
 				return nil, errTest
 			},

@@ -156,52 +156,28 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		"ok/enabled/true": {
-			body:       `{"0":{"enabled":true}}`,
-			wantStatus: http.StatusAccepted,
-			want:       `{}`,
-			enableOutput: func(t *testing.T, o string) error {
-				t.Helper()
-				if o != "0" {
-					t.Errorf("call mpd.EnableOutput(%q); want mpd.EnableOutput(%q)", o, "0")
-				}
-				return nil
-			},
+			body:         `{"0":{"enabled":true}}`,
+			wantStatus:   http.StatusAccepted,
+			want:         `{}`,
+			enableOutput: mockStringFunc("mpd.EnableOutput(ctx, %q)", "0", nil),
 		},
 		"error/enabled/true": {
-			body:       `{"0":{"enabled":true}}`,
-			wantStatus: http.StatusInternalServerError,
-			want:       `{"error":"api_test: test error"}`,
-			enableOutput: func(t *testing.T, o string) error {
-				t.Helper()
-				if o != "0" {
-					t.Errorf("call mpd.EnableOutput(%q); want mpd.EnableOutput(%q)", o, "0")
-				}
-				return errTest
-			},
+			body:         `{"0":{"enabled":true}}`,
+			wantStatus:   http.StatusInternalServerError,
+			want:         `{"error":"api_test: test error"}`,
+			enableOutput: mockStringFunc("mpd.EnableOutput(ctx, %q)", "0", errTest),
 		},
 		"ok/enabled/false": {
-			body:       `{"1":{"enabled":false}}`,
-			wantStatus: http.StatusAccepted,
-			want:       `{}`,
-			disableOutput: func(t *testing.T, o string) error {
-				t.Helper()
-				if o != "1" {
-					t.Errorf("call mpd.DisableOutput(..., %q); want mpd.DisableOutput(..., %q)", o, "1")
-				}
-				return nil
-			},
+			body:          `{"1":{"enabled":false}}`,
+			wantStatus:    http.StatusAccepted,
+			want:          `{}`,
+			disableOutput: mockStringFunc("mpd.DisableOutput(ctx, %q)", "1", nil),
 		},
 		"error/enabled/false": {
-			body:       `{"1":{"enabled":false}}`,
-			wantStatus: http.StatusInternalServerError,
-			want:       `{"error":"api_test: test error"}`,
-			disableOutput: func(t *testing.T, o string) error {
-				t.Helper()
-				if o != "1" {
-					t.Errorf("call mpd.DisableOutput(..., %q); want mpd.DisableOutput(..., %q)", o, "1")
-				}
-				return errTest
-			},
+			body:          `{"1":{"enabled":false}}`,
+			wantStatus:    http.StatusInternalServerError,
+			want:          `{"error":"api_test: test error"}`,
+			disableOutput: mockStringFunc("mpd.DisableOutput(ctx, %q)", "1", errTest),
 		},
 		"ok/attributes/dop/true": {
 			body:       `{"1000":{"attributes":{"dop":true}}}`,
@@ -210,7 +186,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			outputSet: func(t *testing.T, a, b, c string) error {
 				t.Helper()
 				if wa, wb, wc := "1000", "dop", "1"; a != wa || b != wb || c != wc {
-					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+					t.Errorf(`called mpd.OutputSet(ctx, %q, %q, %q); want mpd.OutputSet(ctx, %q, %q, %q)`, a, b, c, wa, wb, wc)
 				}
 				return nil
 			},
@@ -222,7 +198,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			outputSet: func(t *testing.T, a, b, c string) error {
 				t.Helper()
 				if wa, wb, wc := "1001", "dop", "0"; a != wa || b != wb || c != wc {
-					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+					t.Errorf(`called mpd.OutputSet(ctx, %q, %q, %q); want mpd.OutputSet(ctx, %q, %q, %q)`, a, b, c, wa, wb, wc)
 				}
 				return nil
 			},
@@ -234,7 +210,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			outputSet: func(t *testing.T, a, b, c string) error {
 				t.Helper()
 				if wa, wb, wc := "1002", "dop", "0"; a != wa || b != wb || c != wc {
-					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+					t.Errorf(`called mpd.OutputSet(ctx, %q, %q, %q); want mpd.OutputSet(ctx, %q, %q, %q)`, a, b, c, wa, wb, wc)
 				}
 				return errTest
 			},
@@ -246,7 +222,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			outputSet: func(t *testing.T, a, b, c string) error {
 				t.Helper()
 				if wa, wb, wc := "1003", "allowed_formats", "dsd64:2 dsd128:2"; a != wa || b != wb || c != wc {
-					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+					t.Errorf(`called mpd.OutputSet(ctx, %q, %q, %q); want mpd.OutputSet(ctx, %q, %q, %q)`, a, b, c, wa, wb, wc)
 				}
 				return nil
 			},
@@ -258,7 +234,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 			outputSet: func(t *testing.T, a, b, c string) error {
 				t.Helper()
 				if wa, wb, wc := "1004", "allowed_formats", ""; a != wa || b != wb || c != wc {
-					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+					t.Errorf(`called mpd.OutputSet(ctx, %q, %q, %q); want mpd.OutputSet(ctx, %q, %q, %q)`, a, b, c, wa, wb, wc)
 				}
 				return nil
 			},

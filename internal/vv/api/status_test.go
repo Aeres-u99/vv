@@ -271,169 +271,85 @@ func TestStatusHandlerPOST(t *testing.T) {
 			body:       `{"volume": 50}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			setVol: func(t *testing.T, i int) error {
-				t.Helper()
-				if i != 50 {
-					t.Errorf("called mpd.SetVol(ctx, %d); want mpd.SetVol(ctx, %d)", i, 50)
-				}
-				return nil
-			},
+			setVol:     mockIntFunc("mpd.SetVol(ctx, %q)", 50, nil),
 		},
 		`error/{"volume":50}`: {
 			body:       `{"volume": 50}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			setVol: func(t *testing.T, i int) error {
-				t.Helper()
-				if i != 50 {
-					t.Errorf("called mpd.SetVol(ctx, %d); want mpd.SetVol(ctx, %d)", i, 50)
-				}
-				return errTest
-			},
+			setVol:     mockIntFunc("mpd.SetVol(ctx, %q)", 50, errTest),
 		},
 		`ok/{"repeat":false}`: {
 			body:       `{"repeat":false}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			repeat: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := false; got != want {
-					t.Errorf("called mpd.Repeat(ctx, %v); want mpd.Repeat(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			repeat:     mockBoolFunc("mpd.Repeat(ctx, %v)", false, nil),
 		},
 		`error/{"repeat":false}`: {
 			body:       `{"repeat":false}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			repeat: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := false; got != want {
-					t.Errorf("called mpd.Repeat(ctx, %v); want mpd.Repeat(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			repeat:     mockBoolFunc("mpd.Repeat(ctx, %v)", false, errTest),
 		},
 		`ok/{"random":true}`: {
 			body:       `{"random":true}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			random: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := true; got != want {
-					t.Errorf("called mpd.Random(ctx, %v); want mpd.Random(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			random:     mockBoolFunc("mpd.Random(ctx, %v)", true, nil),
 		},
 		`error/{"random":true}`: {
 			body:       `{"random":true}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			random: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := true; got != want {
-					t.Errorf("called mpd.Random(ctx, %v); want mpd.Random(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			random:     mockBoolFunc("mpd.Random(ctx, %v)", true, errTest),
 		},
 		`ok/{"single":false}`: {
 			body:       `{"single":false}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			single: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := false; got != want {
-					t.Errorf("called mpd.Single(ctx, %v); want mpd.Single(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			single:     mockBoolFunc("mpd.Single(ctx, %v)", false, nil),
 		},
 		`error/{"single":false}`: {
 			body:       `{"single":false}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			single: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := false; got != want {
-					t.Errorf("called mpd.Single(ctx, %v); want mpd.Single(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			single:     mockBoolFunc("mpd.Single(ctx, %v)", false, errTest),
 		},
 		`ok/{"consume":true}`: {
 			body:       `{"consume":true}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			consume: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := true; got != want {
-					t.Errorf("called mpd.Consume(ctx, %v); want mpd.Consume(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			consume:    mockBoolFunc("mpd.Consume(ctx, %v)", true, nil),
 		},
 		`error/{"consume":true}`: {
 			body:       `{"consume":true}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			consume: func(t *testing.T, got bool) error {
-				t.Helper()
-				if want := true; got != want {
-					t.Errorf("called mpd.Consume(ctx, %v); want mpd.Consume(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			consume:    mockBoolFunc("mpd.Consume(ctx, %v)", true, errTest),
 		},
 		`ok/{"song_elapsed":73.2}`: {
 			body:       `{"song_elapsed":73.2}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			seekCur: func(t *testing.T, got float64) error {
-				t.Helper()
-				if want := 73.2; got != want {
-					t.Errorf("called mpd.SeekCur(ctx, %v); want mpd.SeekCur(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			seekCur:    mockFloat64Func("mpd.SeekCur(ctx, %v)", 73.2, nil),
 		},
 		`error/{"song_elapsed":73.2}`: {
 			body:       `{"song_elapsed":73.2}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			seekCur: func(t *testing.T, got float64) error {
-				t.Helper()
-				if want := 73.2; got != want {
-					t.Errorf("called mpd.SeekCur(ctx, %v); want mpd.SeekCur(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			seekCur:    mockFloat64Func("mpd.SeekCur(ctx, %v)", 73.2, errTest),
 		},
 		`ok/{"replay_gain":"album"}`: {
-			body:       `{"replay_gain":"album"}`,
-			wantStatus: http.StatusAccepted,
-			want:       `{}`,
-			replayGainMode: func(t *testing.T, got string) error {
-				t.Helper()
-				if want := "album"; got != want {
-					t.Errorf("called mpd.ReplayGainMode(ctx, %v); want mpd.ReplayGainMode(ctx, %v)", got, want)
-				}
-				return nil
-			},
+			body:           `{"replay_gain":"album"}`,
+			wantStatus:     http.StatusAccepted,
+			want:           `{}`,
+			replayGainMode: mockStringFunc("mpd.ReplayGainMode(ctx, %q)", "album", nil),
 		},
 		`error/{"replay_gain":"album"}`: {
-			body:       `{"replay_gain":"album"}`,
-			wantStatus: http.StatusInternalServerError,
-			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			replayGainMode: func(t *testing.T, got string) error {
-				t.Helper()
-				if want := "album"; got != want {
-					t.Errorf("called mpd.ReplayGainMode(ctx, %v); want mpd.ReplayGainMode(ctx, %v)", got, want)
-				}
-				return errTest
-			},
+			body:           `{"replay_gain":"album"}`,
+			wantStatus:     http.StatusInternalServerError,
+			want:           fmt.Sprintf(`{"error":%q}`, errTest.Error()),
+			replayGainMode: mockStringFunc("mpd.ReplayGainMode(ctx, %q)", "album", errTest),
 		},
 		`ok/{"crossfade":5}`: {
 			body:       `{"crossfade":5}`,
@@ -442,7 +358,7 @@ func TestStatusHandlerPOST(t *testing.T) {
 			crossfade: func(t *testing.T, got time.Duration) error {
 				t.Helper()
 				if want := 5 * time.Second; got != want {
-					t.Errorf("called mpd.Play(ctx, %d); want mpd.Play(ctx, %d)", got, want)
+					t.Errorf("called mpd.Crossfade(ctx, %q); want mpd.Crossfade(ctx, %q)", got, want)
 				}
 				return nil
 			},
@@ -454,7 +370,7 @@ func TestStatusHandlerPOST(t *testing.T) {
 			crossfade: func(t *testing.T, got time.Duration) error {
 				t.Helper()
 				if want := 5 * time.Second; got != want {
-					t.Errorf("called mpd.Play(ctx, %d); want mpd.Play(ctx, %d)", got, want)
+					t.Errorf("called mpd.Crossfade(ctx, %q); want mpd.Crossfade(ctx, %q)", got, want)
 				}
 				return errTest
 			},
@@ -463,49 +379,25 @@ func TestStatusHandlerPOST(t *testing.T) {
 			body:       `{"state":"play"}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			play: func(t *testing.T, i int) error {
-				t.Helper()
-				if i != -1 {
-					t.Errorf("called mpd.Play(ctx, %d); want mpd.Play(ctx, %d)", i, -1)
-				}
-				return nil
-			},
+			play:       mockIntFunc("mpd.Play(ctx, %q)", -1, nil),
 		},
 		`error/{"state":"play"}`: {
 			body:       `{"state":"play"}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			play: func(t *testing.T, i int) error {
-				t.Helper()
-				if i != -1 {
-					t.Errorf("called mpd.Play(ctx, %d); want mpd.Play(ctx, -1)", i)
-				}
-				return errTest
-			},
+			play:       mockIntFunc("mpd.Play(ctx, %q)", -1, errTest),
 		},
 		`ok/{"state":"pause"}`: {
 			body:       `{"state":"pause"}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
-			pause: func(t *testing.T, b bool) error {
-				t.Helper()
-				if b != true {
-					t.Errorf("called mpd.Pause(ctx, %v); want mpd.Pause(ctx, true)", b)
-				}
-				return nil
-			},
+			pause:      mockBoolFunc("mpd.Pause(ctx, %v)", true, nil),
 		},
 		`error/{"state":"pause"}`: {
 			body:       `{"state":"pause"}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       fmt.Sprintf(`{"error":%q}`, errTest.Error()),
-			pause: func(t *testing.T, b bool) error {
-				t.Helper()
-				if b != true {
-					t.Errorf("called mpd.Pause(ctx, %v); want mpd.Pause(ctx, true)", b)
-				}
-				return errTest
-			},
+			pause:      mockBoolFunc("mpd.Pause(ctx, %v)", true, errTest),
 		},
 		`ok/{"state":"next"}`: {
 			body:       `{"state":"next"}`,

@@ -91,7 +91,7 @@ func TestLibraryHandlerPOST(t *testing.T) {
 			update: func(t *testing.T, a string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; a != want {
-					t.Errorf("call (*mpd.MPD).Update(ctx, %q); want (*mpd.MPD).Update(ctx, %q)", a, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", a, want)
 				}
 				return map[string]string{"updating": "1"}, nil
 			},
@@ -103,7 +103,7 @@ func TestLibraryHandlerPOST(t *testing.T) {
 			update: func(t *testing.T, a string) (map[string]string, error) {
 				t.Helper()
 				if want := ""; a != want {
-					t.Errorf("call (*mpd.MPD).Update(ctx, %q); want (*mpd.MPD).Update(ctx, %q)", a, want)
+					t.Errorf("called mpd.Update(ctx, %q); want mpd.Update(ctx, %q)", a, want)
 				}
 				return nil, errTest
 			},

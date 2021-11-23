@@ -13,88 +13,89 @@ import (
 
 func TestNeighborsHandlerGET(t *testing.T) {
 	for label, tt := range map[string][]struct {
-		label   string
-		mpd     mpdNeighborsFunc
-		err     error
-		want    string
-		changed bool
+		label         string
+		listNeighbors func() ([]map[string]string, error)
+		err           error
+		want          string
+		changed       bool
 	}{
 		"ok": {{
 			label: "empty",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return []map[string]string{}, nil
-			}),
+			},
 			want: "{}",
 		}, {
 			label: "some data",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return []map[string]string{
 					{
 						"neighbor": "smb://FOO",
 						"name":     "FOO (Samba 4.1.11-Debian)",
 					},
 				}, nil
-			}),
+			},
 			want:    `{"FOO (Samba 4.1.11-Debian)":{"uri":"smb://FOO"}}`,
 			changed: true,
 		}, {
 			label: "remove",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return []map[string]string{}, nil
-			}),
+			},
 			want:    "{}",
 			changed: true,
 		}},
 		"error/network": {{
 			label: "prepare data",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return []map[string]string{
 					{
 						"neighbor": "smb://FOO",
 						"name":     "FOO (Samba 4.1.11-Debian)",
 					},
 				}, nil
-			}),
+			},
 			want:    `{"FOO (Samba 4.1.11-Debian)":{"uri":"smb://FOO"}}`,
 			changed: true,
 		}, {
 			label: "error",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return nil, errTest
-			}),
+			},
 			err:  errTest,
 			want: `{"FOO (Samba 4.1.11-Debian)":{"uri":"smb://FOO"}}`,
 		}},
 		"error/mpd": {{
 			label: "prepare data",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return []map[string]string{
 					{
 						"neighbor": "smb://FOO",
 						"name":     "FOO (Samba 4.1.11-Debian)",
 					},
 				}, nil
-			}),
+			},
 			want:    `{"FOO (Samba 4.1.11-Debian)":{"uri":"smb://FOO"}}`,
 			changed: true,
 		}, {
 			label: "unknown command",
-			mpd: mpdNeighborsFunc(func(context.Context) ([]map[string]string, error) {
+			listNeighbors: func() ([]map[string]string, error) {
 				return nil, &mpd.CommandError{ID: 5, Index: 0, Command: "listneighbors", Message: "unknown command \"listneighbors\""}
-			}),
+			},
 			want:    "{}",
 			changed: true,
 		}},
 	} {
 		t.Run(label, func(t *testing.T) {
-			f := make(mpdNeighborsFuncs, 1)
-			h, err := api.NewNeighborsHandler(f)
+			mpd := &mpdNeighbors{t: t}
+			h, err := api.NewNeighborsHandler(mpd)
 			if err != nil {
 				t.Fatalf("failed to init Neighbors: %v", err)
 			}
 			for i := range tt {
 				t.Run(tt[i].label, func(t *testing.T) {
-					f[0] = tt[i].mpd
+					mpd.t = t
+					mpd.listNeighbors = tt[i].listNeighbors
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
 						t.Errorf("Update(ctx) = %v; want %v", err, tt[i].err)
 					}
@@ -113,14 +114,15 @@ func TestNeighborsHandlerGET(t *testing.T) {
 	}
 }
 
-type mpdNeighborsFunc func(context.Context) ([]map[string]string, error)
-
-func (m mpdNeighborsFunc) ListNeighbors(ctx context.Context) ([]map[string]string, error) {
-	return m(ctx)
+type mpdNeighbors struct {
+	t             *testing.T
+	listNeighbors func() ([]map[string]string, error)
 }
 
-type mpdNeighborsFuncs []mpdNeighborsFunc
-
-func (m mpdNeighborsFuncs) ListNeighbors(ctx context.Context) ([]map[string]string, error) {
-	return m[len(m)-1](ctx)
+func (m *mpdNeighbors) ListNeighbors(ctx context.Context) ([]map[string]string, error) {
+	m.t.Helper()
+	if m.listNeighbors == nil {
+		m.t.Fatal("no ListNeighbors mock function")
+	}
+	return m.listNeighbors()
 }
