@@ -78,7 +78,27 @@ func (a *StorageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeHTTPError(w, http.StatusBadRequest, errors.New("storage name is empty"))
 			return
 		}
-		if v == nil {
+		if v != nil && v.Updating {
+			// TODO: This is not intuitive
+			if _, err := a.mpd.Update(ctx, k); err != nil {
+				writeHTTPError(w, http.StatusInternalServerError, err)
+				return
+			}
+			// updating request does not affect response and always returns 202
+			now := time.Now().UTC()
+			r = setUpdateTime(r, now)
+		} else if v != nil && v.URI != nil {
+			if err := a.mpd.Mount(ctx, k, *v.URI); err != nil {
+				writeHTTPError(w, http.StatusInternalServerError, err)
+				return
+			}
+			now := time.Now().UTC()
+			r = setUpdateTime(r, now)
+			if _, err := a.mpd.Update(ctx, k); err != nil {
+				writeHTTPError(w, http.StatusInternalServerError, err)
+				return
+			}
+		} else {
 			if err := a.mpd.Unmount(ctx, k); err != nil {
 				writeHTTPError(w, http.StatusInternalServerError, err)
 				return
@@ -88,38 +108,6 @@ func (a *StorageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if _, err := a.mpd.Update(ctx, ""); err != nil {
 				writeHTTPError(w, http.StatusInternalServerError, err)
 				return
-			}
-		} else {
-			if v.Updating {
-				if _, err := a.mpd.Update(ctx, k); err != nil {
-					writeHTTPError(w, http.StatusInternalServerError, err)
-					return
-				}
-				// updating request does not affect response and always returns 202
-				now := time.Now().UTC()
-				r = setUpdateTime(r, now)
-			} else if v.URI != nil {
-				if err := a.mpd.Mount(ctx, k, *v.URI); err != nil {
-					writeHTTPError(w, http.StatusInternalServerError, err)
-					return
-				}
-				now := time.Now().UTC()
-				r = setUpdateTime(r, now)
-				if _, err := a.mpd.Update(ctx, k); err != nil {
-					writeHTTPError(w, http.StatusInternalServerError, err)
-					return
-				}
-			} else {
-				if err := a.mpd.Unmount(ctx, k); err != nil {
-					writeHTTPError(w, http.StatusInternalServerError, err)
-					return
-				}
-				now := time.Now().UTC()
-				r = setUpdateTime(r, now)
-				if _, err := a.mpd.Update(ctx, ""); err != nil {
-					writeHTTPError(w, http.StatusInternalServerError, err)
-					return
-				}
 			}
 		}
 	}

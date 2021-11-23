@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/meiraka/vv/internal/mpd"
@@ -138,6 +139,146 @@ func TestOutputsHandlerGET(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+func TestOutputsHandlerPOST(t *testing.T) {
+	for label, tt := range map[string]struct {
+		body          string
+		wantStatus    int
+		want          string
+		enableOutput  func(*testing.T, string) error
+		disableOutput func(*testing.T, string) error
+		outputSet     func(*testing.T, string, string, string) error
+	}{
+		"error/invalid json": {
+			body:       `invalid json`,
+			want:       `{"error":"invalid character 'i' looking for beginning of value"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		"ok/enabled/true": {
+			body:       `{"0":{"enabled":true}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			enableOutput: func(t *testing.T, o string) error {
+				t.Helper()
+				if o != "0" {
+					t.Errorf("call mpd.EnableOutput(%q); want mpd.EnableOutput(%q)", o, "0")
+				}
+				return nil
+			},
+		},
+		"error/enabled/true": {
+			body:       `{"0":{"enabled":true}}`,
+			wantStatus: http.StatusInternalServerError,
+			want:       `{"error":"api_test: test error"}`,
+			enableOutput: func(t *testing.T, o string) error {
+				t.Helper()
+				if o != "0" {
+					t.Errorf("call mpd.EnableOutput(%q); want mpd.EnableOutput(%q)", o, "0")
+				}
+				return errTest
+			},
+		},
+		"ok/enabled/false": {
+			body:       `{"1":{"enabled":false}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			disableOutput: func(t *testing.T, o string) error {
+				t.Helper()
+				if o != "1" {
+					t.Errorf("call mpd.DisableOutput(..., %q); want mpd.DisableOutput(..., %q)", o, "1")
+				}
+				return nil
+			},
+		},
+		"error/enabled/false": {
+			body:       `{"1":{"enabled":false}}`,
+			wantStatus: http.StatusInternalServerError,
+			want:       `{"error":"api_test: test error"}`,
+			disableOutput: func(t *testing.T, o string) error {
+				t.Helper()
+				if o != "1" {
+					t.Errorf("call mpd.DisableOutput(..., %q); want mpd.DisableOutput(..., %q)", o, "1")
+				}
+				return errTest
+			},
+		},
+		"ok/attributes/dop/true": {
+			body:       `{"1000":{"attributes":{"dop":true}}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			outputSet: func(t *testing.T, a, b, c string) error {
+				t.Helper()
+				if wa, wb, wc := "1000", "dop", "1"; a != wa || b != wb || c != wc {
+					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+				}
+				return nil
+			},
+		},
+		"ok/attributes/dop/false": {
+			body:       `{"1001":{"attributes":{"dop":false}}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			outputSet: func(t *testing.T, a, b, c string) error {
+				t.Helper()
+				if wa, wb, wc := "1001", "dop", "0"; a != wa || b != wb || c != wc {
+					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+				}
+				return nil
+			},
+		},
+		"error/attributes/dop/false": {
+			body:       `{"1002":{"attributes":{"dop":false}}}`,
+			wantStatus: http.StatusInternalServerError,
+			want:       `{"error":"api_test: test error"}`,
+			outputSet: func(t *testing.T, a, b, c string) error {
+				t.Helper()
+				if wa, wb, wc := "1002", "dop", "0"; a != wa || b != wb || c != wc {
+					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+				}
+				return errTest
+			},
+		},
+		"ok/attributes/allowed_formats/somevalue": {
+			body:       `{"1003":{"attributes":{"allowed_formats":["dsd64:2","dsd128:2"]}}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			outputSet: func(t *testing.T, a, b, c string) error {
+				t.Helper()
+				if wa, wb, wc := "1003", "allowed_formats", "dsd64:2 dsd128:2"; a != wa || b != wb || c != wc {
+					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+				}
+				return nil
+			},
+		},
+		"ok/attributes/allowed_formats/empty": {
+			body:       `{"1004":{"attributes":{"allowed_formats":[]}}}`,
+			wantStatus: http.StatusAccepted,
+			want:       `{}`,
+			outputSet: func(t *testing.T, a, b, c string) error {
+				t.Helper()
+				if wa, wb, wc := "1004", "allowed_formats", ""; a != wa || b != wb || c != wc {
+					t.Errorf(`call mpd.OutputSet(..., %q, %q, %q); want mpd.OutputSet(..., %q, %q, %q)`, a, b, c, wa, wb, wc)
+				}
+				return nil
+			},
+		},
+	} {
+		t.Run(label, func(t *testing.T) {
+			mpd := &mpdOutputs{t: t, enableOutput: tt.enableOutput, disableOutput: tt.disableOutput, outputSet: tt.outputSet}
+			h, err := api.NewOutputsHandler(mpd, map[string]string{})
+			if err != nil {
+				t.Fatalf("api.NewOutputsHandler(mpd) = %v, %v", h, err)
+			}
+			defer h.Close()
+			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if status, got := w.Result().StatusCode, w.Body.String(); status != tt.wantStatus || got != tt.want {
+				t.Errorf("ServeHTTP got\n%d %s; want\n%d %s", status, got, tt.wantStatus, tt.want)
+			}
+		})
+
 	}
 }
 
