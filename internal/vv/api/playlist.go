@@ -78,7 +78,6 @@ func (a *PlaylistHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeHTTPError(w, http.StatusServiceUnavailable, errors.New("updating playlist"))
 		return
 	}
-	defer func() { a.sem <- struct{}{} }()
 
 	a.mu.Lock()
 	librarySort, filters, newpos := songs.WeakFilterSort(a.library, req.Sort, req.Filters, req.Must, 9999, *req.Current)
@@ -92,6 +91,7 @@ func (a *PlaylistHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	cl.Play(newpos)
 	if !update {
+		defer func() { a.sem <- struct{}{} }()
 		a.updateSort(req.Sort, filters, req.Must)
 		a.mu.Lock()
 		a.cache.SetIfModified(a.data)
@@ -109,14 +109,9 @@ func (a *PlaylistHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Method = http.MethodGet
 	a.cache.ServeHTTP(w, setUpdateTime(r, time.Now().UTC()))
 	go func() {
+		defer func() { a.sem <- struct{}{} }()
 		ctx, cancel := context.WithTimeout(context.Background(), a.config.BackgroundTimeout)
 		defer cancel()
-		select {
-		case <-a.sem:
-		case <-ctx.Done():
-			return
-		}
-		defer func() { a.sem <- struct{}{} }()
 		if err := a.mpd.ExecCommandList(ctx, cl); err != nil {
 			return
 		}
@@ -173,8 +168,7 @@ func (a *PlaylistHandler) UpdatePlaylistSongs(i []map[string][]string) {
 
 func (a *PlaylistHandler) UpdateLibrarySongs(i []map[string][]string) {
 	a.mu.Lock()
-	// FIXME: copy library
-	a.library = i
+	a.library = songs.Copy(i)
 	a.librarySort = nil
 	a.mu.Unlock()
 }
@@ -187,4 +181,25 @@ func (a *PlaylistHandler) Changed() <-chan struct{} {
 // Close closes update event chan.
 func (a *PlaylistHandler) Close() {
 	a.cache.Close()
+}
+
+// Wait waits playlist updates.
+func (a *PlaylistHandler) Wait(ctx context.Context) error {
+	select {
+	case <-a.sem:
+		a.sem <- struct{}{}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Shutdown waits playlist updates. Shutdown does not allow no playlist updates request.
+func (a *PlaylistHandler) Shutdown(ctx context.Context) error {
+	select {
+	case <-a.sem:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

@@ -106,6 +106,7 @@ func NewHandler(ctx context.Context, cl *mpd.Client, w *mpd.Watcher, c *Config) 
 		return nil, err
 	}
 	h.closable = append(h.closable, h.apiMusicPlaylist)
+	h.shutdownable = append(h.shutdownable, h.apiMusicPlaylist)
 
 	if h.apiMusicPlaylistSongs, err = NewPlaylistSongsHandler(cl, h.songsHook); err != nil {
 		return nil, err
