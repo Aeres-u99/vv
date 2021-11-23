@@ -150,36 +150,36 @@ func TestOutputsHandlerPOST(t *testing.T) {
 		disableOutput func(*testing.T, string) error
 		outputSet     func(*testing.T, string, string, string) error
 	}{
-		"error/invalid json": {
+		`error/invalid json`: {
 			body:       `invalid json`,
 			want:       `{"error":"invalid character 'i' looking for beginning of value"}`,
 			wantStatus: http.StatusBadRequest,
 		},
-		"ok/enabled/true": {
+		`ok/{"enabled":true}`: {
 			body:         `{"0":{"enabled":true}}`,
 			wantStatus:   http.StatusAccepted,
 			want:         `{}`,
 			enableOutput: mockStringFunc("mpd.EnableOutput(ctx, %q)", "0", nil),
 		},
-		"error/enabled/true": {
+		`error/{"enabled":true}`: {
 			body:         `{"0":{"enabled":true}}`,
 			wantStatus:   http.StatusInternalServerError,
 			want:         `{"error":"api_test: test error"}`,
 			enableOutput: mockStringFunc("mpd.EnableOutput(ctx, %q)", "0", errTest),
 		},
-		"ok/enabled/false": {
+		`ok/{"enabled":false}`: {
 			body:          `{"1":{"enabled":false}}`,
 			wantStatus:    http.StatusAccepted,
 			want:          `{}`,
 			disableOutput: mockStringFunc("mpd.DisableOutput(ctx, %q)", "1", nil),
 		},
-		"error/enabled/false": {
+		`error/{"enabled":false}`: {
 			body:          `{"1":{"enabled":false}}`,
 			wantStatus:    http.StatusInternalServerError,
 			want:          `{"error":"api_test: test error"}`,
 			disableOutput: mockStringFunc("mpd.DisableOutput(ctx, %q)", "1", errTest),
 		},
-		"ok/attributes/dop/true": {
+		`ok/{"attributes":{"dop":true}}`: {
 			body:       `{"1000":{"attributes":{"dop":true}}}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
@@ -191,7 +191,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 				return nil
 			},
 		},
-		"ok/attributes/dop/false": {
+		`ok/{"attributes":{"dop":false}}`: {
 			body:       `{"1001":{"attributes":{"dop":false}}}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
@@ -203,7 +203,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 				return nil
 			},
 		},
-		"error/attributes/dop/false": {
+		`error/{"attributes":{"dop":false}}`: {
 			body:       `{"1002":{"attributes":{"dop":false}}}`,
 			wantStatus: http.StatusInternalServerError,
 			want:       `{"error":"api_test: test error"}`,
@@ -215,7 +215,7 @@ func TestOutputsHandlerPOST(t *testing.T) {
 				return errTest
 			},
 		},
-		"ok/attributes/allowed_formats/somevalue": {
+		`ok/{"attributes":{"allowed_formats":["dsd64:2","dsd128:2"]}}`: {
 			body:       `{"1003":{"attributes":{"allowed_formats":["dsd64:2","dsd128:2"]}}}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,
@@ -227,7 +227,12 @@ func TestOutputsHandlerPOST(t *testing.T) {
 				return nil
 			},
 		},
-		"ok/attributes/allowed_formats/empty": {
+		`error/{"attributes":{"allowed_formats":["invalid allowed formats"]}}`: {
+			body:       `{"1003":{"attributes":{"allowed_formats":["invalid allowed formats"]}}}`,
+			wantStatus: http.StatusBadRequest,
+			want:       `{"error":"api: invalid allowed formats: #0: \"invalid allowed formats\""}`,
+		},
+		`ok/{"attributes":{"allowed_formats":[]}}`: {
 			body:       `{"1004":{"attributes":{"allowed_formats":[]}}}`,
 			wantStatus: http.StatusAccepted,
 			want:       `{}`,

@@ -84,7 +84,7 @@ func TestLibraryHandlerPOST(t *testing.T) {
 		want       string
 		update     func(*testing.T, string) (map[string]string, error)
 	}{
-		"updating/true": {
+		`ok/{"updating":true}`: {
 			body:       `{"updating":true}`,
 			want:       `{"updating":false}`,
 			wantStatus: http.StatusAccepted,
@@ -96,7 +96,7 @@ func TestLibraryHandlerPOST(t *testing.T) {
 				return map[string]string{"updating": "1"}, nil
 			},
 		},
-		"updating/true/error": {
+		`error/{"updating":true}`: {
 			body:       `{"updating":true}`,
 			want:       fmt.Sprintf(`{"error":"%s"}`, errTest.Error()),
 			wantStatus: http.StatusInternalServerError,
@@ -108,14 +108,14 @@ func TestLibraryHandlerPOST(t *testing.T) {
 				return nil, errTest
 			},
 		},
-		"updating/false": {
+		`error/{"updating":false}`: {
 			body:       `{"updating":false}`,
 			want:       `{"error":"requires updating=true"}`,
 			wantStatus: http.StatusBadRequest,
 		},
-		"invalid json": {
-			body:       `not json`,
-			want:       `{"error":"invalid character 'o' in literal null (expecting 'u')"}`,
+		`error/invalid json`: {
+			body:       `invalid json`,
+			want:       `{"error":"invalid character 'i' looking for beginning of value"}`,
 			wantStatus: http.StatusBadRequest,
 		},
 	} {

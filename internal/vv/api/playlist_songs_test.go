@@ -15,6 +15,7 @@ import (
 func TestPlaylistSongsHandlerGET(t *testing.T) {
 	songsHook, randValue := testSongsHook()
 	for label, tt := range map[string][]struct {
+		label        string
 		playlistInfo func(*testing.T) ([]map[string][]string, error)
 		err          error
 		want         string
@@ -36,7 +37,8 @@ func TestPlaylistSongsHandlerGET(t *testing.T) {
 			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
 			changed: true,
 		}},
-		`error after exists`: {{
+		`error`: {{
+			label: "prepare data",
 			playlistInfo: func(t *testing.T) ([]map[string][]string, error) {
 				return []map[string][]string{{"file": {"/foo/bar.mp3"}}}, nil
 			},
@@ -44,6 +46,7 @@ func TestPlaylistSongsHandlerGET(t *testing.T) {
 			cache:   []map[string][]string{{"file": {"/foo/bar.mp3"}, randValue: {randValue}}},
 			changed: true,
 		}, {
+			label: "error",
 			playlistInfo: func(t *testing.T) ([]map[string][]string, error) {
 				t.Helper()
 				return nil, errTest
@@ -61,7 +64,7 @@ func TestPlaylistSongsHandlerGET(t *testing.T) {
 				t.Fatalf("api.NewPlaylistSongs() = %v, %v", h, err)
 			}
 			for i := range tt {
-				t.Run(fmt.Sprint(i), func(t *testing.T) {
+				f := func(t *testing.T) {
 					mpd.playlistInfo = tt[i].playlistInfo
 					if err := h.Update(context.TODO()); !errors.Is(err, tt[i].err) {
 						t.Errorf("handler.Update(context.TODO()) = %v; want %v", err, tt[i].err)
@@ -79,7 +82,12 @@ func TestPlaylistSongsHandlerGET(t *testing.T) {
 					if changed := recieveMsg(h.Changed()); changed != tt[i].changed {
 						t.Errorf("changed = %v; want %v", changed, tt[i].changed)
 					}
-				})
+				}
+				if len(tt) != 1 {
+					t.Run(tt[i].label, f)
+				} else {
+					f(t)
+				}
 			}
 		})
 	}

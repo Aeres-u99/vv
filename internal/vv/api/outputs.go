@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -85,8 +86,15 @@ func (a *OutputsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if v.Attributes.AllowedFormats != nil {
+				allowedFormats := *v.Attributes.AllowedFormats
+				for i := range allowedFormats {
+					if strings.Contains(allowedFormats[i], " ") {
+						writeHTTPError(w, http.StatusBadRequest, fmt.Errorf("api: invalid allowed formats: #%d: %q", i, allowedFormats[i]))
+						return
+					}
+				}
 				changed = true
-				if err := a.mpd.OutputSet(ctx, k, "allowed_formats", strings.Join(*v.Attributes.AllowedFormats, " ")); err != nil {
+				if err := a.mpd.OutputSet(ctx, k, "allowed_formats", strings.Join(allowedFormats, " ")); err != nil {
 					writeHTTPError(w, http.StatusInternalServerError, err)
 					return
 				}

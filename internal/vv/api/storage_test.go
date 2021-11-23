@@ -125,7 +125,7 @@ func TestStorageHandlerPOST(t *testing.T) {
 			status: http.StatusBadRequest,
 			want:   `{"error":"invalid character 'i' looking for beginning of value"}`,
 		},
-		"error/bad json": {
+		`error/{"":{}}`: {
 			body:   `{"":{}}`,
 			status: http.StatusBadRequest,
 			want:   `{"error":"storage name is empty"}`,

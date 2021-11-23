@@ -31,14 +31,14 @@ func TestImagesHandler(t *testing.T) {
 		wantStatus int
 		img        *imageProvider
 	}{
-		"ok": {{
+		"ok/GET": {{
 			method:     http.MethodGet,
 			songs:      songs,
 			want:       `{"updating":false}`,
 			wantStatus: http.StatusOK,
 		}},
-		"updating/true/running": {{
-			label:      "POST",
+		"ok/updating/running": {{
+			label:      `POST/{"updating":true}`,
 			method:     http.MethodPost,
 			body:       strings.NewReader(`{"updating":true}`),
 			songs:      songs,
@@ -55,7 +55,7 @@ func TestImagesHandler(t *testing.T) {
 					return nil
 				}},
 		}, {
-			label:      "POST/already running",
+			label:      `POST/{"updating":true}/already running`,
 			method:     http.MethodPost,
 			body:       strings.NewReader(`{"updating":true}`),
 			want:       `{"error":"api: update already started"}`,
@@ -67,8 +67,8 @@ func TestImagesHandler(t *testing.T) {
 			want:       `{"updating":true}`,
 			wantStatus: http.StatusOK,
 		}},
-		"updating/true/stopped": {{
-			label:      "POST",
+		"ok/updating/stopped": {{
+			label:      `POST/{"updating":true}`,
 			method:     http.MethodPost,
 			body:       strings.NewReader(`{"updating":true}`),
 			songs:      songs,
@@ -93,14 +93,14 @@ func TestImagesHandler(t *testing.T) {
 			want:       `{"updating":false}`,
 			wantStatus: http.StatusOK,
 		}},
-		"POST/invalid json": {{
+		"error/POST/invalid json": {{
 			method:     http.MethodPost,
 			body:       strings.NewReader(`invalid json`),
 			songs:      songs,
 			want:       `{"error":"invalid character 'i' looking for beginning of value"}`,
 			wantStatus: http.StatusBadRequest,
 		}},
-		"updating/false": {{
+		`error/POST/{"updating":false}`: {{
 			method:     http.MethodPost,
 			body:       strings.NewReader(`{"updating":false}`),
 			songs:      songs,
