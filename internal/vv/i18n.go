@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"mime"
 	"net/http"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -66,44 +65,6 @@ func i18nHandler(rpath string, b []byte, extra map[string]string) (http.HandlerF
 		}
 		w.Header().Add("Content-Length", strconv.Itoa(len(body)))
 		w.Write(body)
-	}, nil
-}
-
-func i18nLocalHandler(rpath string, date time.Time, extra map[string]string) (http.HandlerFunc, error) {
-	matcher := language.NewMatcher(translatePrio)
-	m := mime.TypeByExtension(path.Ext(rpath))
-	return func(w http.ResponseWriter, r *http.Request) {
-		info, err := os.Stat(rpath)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-		l := info.ModTime().UTC()
-		if l.Before(date) {
-			l = date.UTC()
-		}
-		if !request.ModifiedSince(r, l) {
-			w.WriteHeader(304)
-			return
-		}
-		tag, _ := determineLanguage(r, matcher)
-		data, err := os.ReadFile(rpath)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		data, err = translate(data, tag, extra)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.Header().Add("Cache-Control", "max-age=1")
-		w.Header().Add("Content-Language", tag.String())
-		w.Header().Add("Content-Length", strconv.Itoa(len(data)))
-		w.Header().Add("Content-Type", m+"; charset=utf-8")
-		w.Header().Add("Last-Modified", l.Format(http.TimeFormat))
-		w.Header().Add("Vary", "Accept-Encoding, Accept-Language")
-		w.Write(data)
 	}, nil
 }
 

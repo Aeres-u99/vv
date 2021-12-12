@@ -1,23 +1,23 @@
 package vv
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/meiraka/vv/internal/vv/assets"
 )
 
+//go:embed app.html
+var appHTML []byte
+
 // HTMLConfig is options for HTMLHandler.
 type HTMLConfig struct {
-	Local     bool      // use local asset file(assets/app.html)
-	LocalDate time.Time // Last-Modified value for Local option
-	LocalDir  string    // path to asset files directory
-	Tree      Tree      // playlist view definition.
-	TreeOrder []string  // order of playlist tree.
+	Tree      Tree     // playlist view definition.
+	TreeOrder []string // order of playlist tree.
 }
 
 // NewHTMLHander creates http.Handler for app root html.
@@ -36,9 +36,6 @@ func NewHTMLHander(config *HTMLConfig) (http.Handler, error) {
 	if c.Tree != nil && c.TreeOrder == nil {
 		return nil, errors.New("invalid config: no tree order")
 	}
-	if c.LocalDir == "" {
-		c.LocalDir = "assets"
-	}
 	extra := map[string]string{
 		"AssetsAppCSSHash": string(assets.AppCSSHash),
 		"AssetsAppJSHash":  string(assets.AppJSHash),
@@ -53,8 +50,5 @@ func NewHTMLHander(config *HTMLConfig) (http.Handler, error) {
 		return nil, fmt.Errorf("tree order: %v", err)
 	}
 	extra["TREE_ORDER"] = string(jsonTreeOrder)
-	if c.Local {
-		return i18nLocalHandler(filepath.Join(c.LocalDir, "app.html"), c.LocalDate, extra)
-	}
-	return i18nHandler(filepath.Join("assets", "app.html"), assets.AppHTML, extra)
+	return i18nHandler(filepath.Join("assets", "app.html"), appHTML, extra)
 }

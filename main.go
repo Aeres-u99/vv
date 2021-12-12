@@ -39,7 +39,7 @@ func configDirs() []string {
 
 func v2() {
 	ctx := context.TODO()
-	config, date, err := ParseConfig(configDirs(), "config.yaml", os.Args)
+	config, _, err := ParseConfig(configDirs(), "config.yaml", os.Args)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -127,14 +127,11 @@ func v2() {
 	root, err := vv.NewHTMLHander(&vv.HTMLConfig{
 		Tree:      toTree(config.Playlist.Tree),
 		TreeOrder: config.Playlist.TreeOrder,
-		Local:     config.debug,
-		LocalDate: date})
+	})
 	if err != nil {
 		log.Fatalf("failed to initialize root handler: %v", err)
 	}
-	assets, err := assets.NewHandler(&assets.Config{
-		Local: config.debug,
-	})
+	assets, err := assets.NewHandler()
 	if err != nil {
 		log.Fatalf("failed to initialize assets handler: %v", err)
 	}

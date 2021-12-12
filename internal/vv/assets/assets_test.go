@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -30,33 +29,8 @@ func Gzip(t *testing.T, b []byte) []byte {
 	return gz
 }
 
-func TestLocalHandler(t *testing.T) {
-	assets := []string{"/assets/app-black.png", "/assets/app-black.svg", "/assets/app.css", "/assets/app.js", "/assets/app.png", "/assets/app.svg", "/assets/manifest.json", "/assets/nocover.svg", "/assets/w.png"}
-	for _, conf := range []*Config{nil, {}, {Local: true, LocalDir: filepath.Join("..", "..", "..", "assets")}} {
-		t.Run(fmt.Sprintf("%+v", conf), func(t *testing.T) {
-			h, err := NewHandler(conf)
-			if err != nil {
-				t.Fatalf("failed to init hander: %v", err)
-			}
-			for _, path := range assets {
-				t.Run(fmt.Sprint(path), func(t *testing.T) {
-					req := httptest.NewRequest(http.MethodGet, path, nil)
-					w := httptest.NewRecorder()
-					h(w, req)
-					resp := w.Result()
-					if resp.StatusCode != 200 {
-						t.Errorf("got %d; want %d", resp.StatusCode, 200)
-					}
-
-				})
-			}
-		})
-	}
-
-}
-
 func TestHandler(t *testing.T) {
-	h, err := NewHandler(nil)
+	h, err := NewHandler()
 	if err != nil {
 		t.Fatalf("failed to init hander: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"mime"
 	"net/http"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,54 +13,41 @@ import (
 	"github.com/meiraka/vv/internal/request"
 )
 
-// Config represents  configuration
-type Config struct {
-	Local    bool   // use local asset files
-	LocalDir string // path to asset files directory
-}
-
 // NewHandler returns hander for asset files.
-func NewHandler(conf *Config) (http.HandlerFunc, error) {
-	c := new(Config)
-	if conf != nil {
-		*c = *conf
-	}
-	if c.LocalDir == "" {
-		c.LocalDir = "assets"
-	}
-	appCSS, err := c.assetsHandler(filepath.Join(c.LocalDir, "app.css"), AppCSS, AppCSSHash)
+func NewHandler() (http.HandlerFunc, error) {
+	appCSS, err := assetsHandler("app.css", AppCSS, AppCSSHash)
 	if err != nil {
 		return nil, err
 	}
-	appJS, err := c.assetsHandler(filepath.Join(c.LocalDir, "app.js"), AppJS, AppJSHash)
+	appJS, err := assetsHandler("app.js", AppJS, AppJSHash)
 	if err != nil {
 		return nil, err
 	}
-	appPNG, err := c.assetsHandler(filepath.Join(c.LocalDir, "app.png"), AppPNG, AppPNGHash)
+	appPNG, err := assetsHandler("app.png", AppPNG, AppPNGHash)
 	if err != nil {
 		return nil, err
 	}
-	appSVG, err := c.assetsHandler(filepath.Join(c.LocalDir, "app.svg"), AppSVG, AppSVGHash)
+	appSVG, err := assetsHandler("app.svg", AppSVG, AppSVGHash)
 	if err != nil {
 		return nil, err
 	}
-	manifestJSON, err := c.assetsHandler(filepath.Join(c.LocalDir, "manifest.json"), ManifestJSON, ManifestJSONHash)
+	manifestJSON, err := assetsHandler("manifest.json", ManifestJSON, ManifestJSONHash)
 	if err != nil {
 		return nil, err
 	}
-	appBlackPNG, err := c.assetsHandler(filepath.Join(c.LocalDir, "app-black.png"), AppBlackPNG, AppBlackPNGHash)
+	appBlackPNG, err := assetsHandler("app-black.png", AppBlackPNG, AppBlackPNGHash)
 	if err != nil {
 		return nil, err
 	}
-	appBlackSVG, err := c.assetsHandler(filepath.Join(c.LocalDir, "app-black.svg"), AppBlackSVG, AppBlackSVGHash)
+	appBlackSVG, err := assetsHandler("app-black.svg", AppBlackSVG, AppBlackSVGHash)
 	if err != nil {
 		return nil, err
 	}
-	wPNG, err := c.assetsHandler(filepath.Join(c.LocalDir, "w.png"), WPNG, WPNGHash)
+	wPNG, err := assetsHandler("w.png", WPNG, WPNGHash)
 	if err != nil {
 		return nil, err
 	}
-	nocoverSVG, err := c.assetsHandler(filepath.Join(c.LocalDir, "nocover.svg"), NocoverSVG, NocoverSVGHash)
+	nocoverSVG, err := assetsHandler("nocover.svg", NocoverSVG, NocoverSVGHash)
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +81,7 @@ func NewHandler(conf *Config) (http.HandlerFunc, error) {
 	}, nil
 }
 
-func (c *Config) assetsHandler(rpath string, b []byte, hash []byte) (http.HandlerFunc, error) {
-	if c.Local {
-		return func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Cache-Control", "max-age=1")
-			http.ServeFile(w, r, rpath)
-		}, nil
-	}
+func assetsHandler(rpath string, b []byte, hash []byte) (http.HandlerFunc, error) {
 	m := mime.TypeByExtension(path.Ext(rpath))
 	var gz []byte
 	var err error

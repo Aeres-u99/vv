@@ -2,9 +2,7 @@ package vv
 
 import (
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestHTMLHandler(t *testing.T) {
@@ -14,9 +12,6 @@ func TestHTMLHandler(t *testing.T) {
 	}{
 		"nil config":   {},
 		"empty config": {config: &HTMLConfig{}},
-		"local dir": {
-			config: &HTMLConfig{Local: true, LocalDir: filepath.Join("..", "..", "assets"), LocalDate: time.Now()},
-		},
 		"tree config only": {
 			config: &HTMLConfig{Tree: Tree{"AlbumArtist": DefaultTree["AlbumArtist"]}},
 			hasErr: true,

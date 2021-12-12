@@ -81,7 +81,7 @@ func ParseConfig(dir []string, name string, args []string) (*Config, time.Time, 
 	mb := flagset.String("mpd.binarylimit", "", "set the maximum binary response size of mpd")
 	sa := flagset.String("server.addr", "", "this app serving address")
 	si := flagset.Bool("server.cover.remote", false, "enable coverart via mpd api")
-	d := flagset.BoolP("debug", "d", false, "use local assets if exists")
+	d := flagset.BoolP("debug", "d", false, "no effect")
 	flagset.Parse(args)
 	if len(*mn) != 0 {
 		c.MPD.Network = *mn
